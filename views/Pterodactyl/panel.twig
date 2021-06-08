@@ -1,0 +1,143 @@
+{% if data.errors %}
+
+	<div class="col-md-12 col-sm-12 alert alert-danger">
+		{{data.errors}}
+	</div>
+{% else %}
+{% if service.terminated == false %}
+    <h2>
+        <i class="fa fa-cogs" aria-hidden="true"></i>
+		
+		{{ attributes.name }}
+		{{ utilization | pterodactyl_server_status}}
+        
+    </h2>
+    <hr>
+        <div class="row">
+            <div class="col-xl-4 col-sm-12 col-md-12">
+                <div class="card card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">
+                            <strong>
+                                <h5>
+                                    <i class="fa fa-rss" aria-hidden="true"></i>
+                                    {{ trans("pterodactyl.panel.information") }}
+                                </h5>
+                            </strong>
+                        </li>
+
+                        <li class="list-group-item">
+                            <strong>
+                                {{ trans("system") }}:    
+                            </strong>
+                            Pterodactyl
+                        </li>
+
+                        <li class="list-group-item">
+                            <strong>
+                                {{ trans("ip") }}:
+                            </strong>
+								{{ ips}}
+                        </li>
+						
+
+                        <li class="list-group-item">
+                            <strong>
+                                {{ trans("email") }}:
+                            </strong>
+								{{ current_user().email }}
+                        </li>
+                        {% if inAdmin == false %}
+                        
+
+                        <li class="list-group-item">
+                            {{ trans("pterodactyl.panel.problem") }}
+                            <strong>
+                                <a href="{{ path('support.submit') }}">
+                                    {{ trans("pterodactyl.panel.openticket") }}
+                                </a>
+                            </strong>
+                        </li>
+                        {% endif %}
+                        
+                    </ul>
+                </div>
+				
+			</div>
+            <div class="col-xl-8 col-sm-12 col-md-12">
+                <div class="row">
+                    {% for key,  values in stats %}
+                {% if inAdmin == false %}
+                
+			
+                        <div class="col-xl-6 col-sm-12 col-md-12">
+
+                            <div class="card card-statistic-1">
+                                <div class="card-icon bg-{{ values[0] }}">
+                                    <i class="{{ values[1] }}"></i>
+                                </div>
+                                <div class="card-wrap">
+                                    <div class="card-header">
+                                        <h4>
+                                            {{ attribute(attributes.limits, key) }}
+                                        </h4>
+                                    </div>
+                                    <div class="card-body">
+                                        {{ trans("pterodactyl.form.resources." ~ key) }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="col-xl-6 col-sm-12 col-md-12">
+                        <div class="small-box bg-{{ values[0] }}">
+                            <div class="inner">
+                            <h3>
+
+                            {{ attribute(attributes.limits, key) }}</h3>
+                    
+                        <p>{{ trans("pterodactyl.form.resources." ~ key) }}</p>
+                            </div>
+                            <div class="icon">
+                            <i class="{{ values[1] }}"></i>
+                            </div>
+                        </div>
+                    </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+        {% endif %}
+        
+		<a href="{{ href }}" class="btn btn-primary btn-block btn-lg mb-2" target="_BLANK">{{ trans("pterodactyl.panel.button") }}</a>
+		
+		{% if utilization is pterodactyl_online %}
+		<div class="row mb-2">
+			<div class="col-xl-4 col-sm-12 col-md-4">
+				<a href="{{ path('pterodactyl.power', {id: service.id, power:'stop'})}}" class="btn btn-danger btn-block btn-lg">
+					{{ trans("pterodactyl.panel.stop") }}
+				</a>
+			</div>
+			<div class="col-xl-4 col-sm-12 col-md-4">
+				<a href="{{ path('pterodactyl.power', {id: service.id, power:'kill'})}}" class="btn btn-warning btn-block btn-lg">
+					{{ trans("pterodactyl.panel.powerstop") }}
+				</a>
+			</div>
+			<div class="col-xl-4 col-sm-12 col-md-4">
+				<a href="{{ path('pterodactyl.power', {id: service.id, power:'restart'})}}" class="btn btn-info btn-block btn-lg">
+					{{ trans("pterodactyl.panel.restart") }}
+				</a>
+			</div>
+		</div>
+	{% endif %}
+
+	{% if utilization is pterodactyl_offline  %}
+
+
+		<a href="{{ path('pterodactyl.power', {id: service.id, power:'start'})}}" class="btn btn-success btn-block btn-lg mb-2">
+			{{ trans("pterodactyl.panel.start") }}
+		</a>
+	{% endif %}
+</div>
+</div>
+	{% endif %}

@@ -1,0 +1,47 @@
+{% extends '@admin/layout.twig' %}
+{% block title trans("pterodactyl.adminindex.title") %}
+{% block style %}
+	{% include "@admin/bullet.twig" %}
+{% endblock %}
+{% block pagetitle trans("pterodactyl.adminindex.title") %}
+{% block pagesubtitle trans("pterodactyl.adminindex.subtitle") %}
+{% block body %}
+	<div class="card">
+		<div class="card-body">
+			<div class="table-responsive">
+				<table class="table table-striped">
+					<thead>
+						<tr>
+							<th scope="col">#</th>
+							<th scope="col">{{ trans("pterodactyl.adminindex.productname")}}</th>
+							<th scope="col">{{ trans("pterodactyl.adminindex.memory")}}</th>
+							<th scope="col">{{ trans("pterodactyl.adminindex.disk")}}</th>
+							<th scope="col">{{ trans("action")}}</th>
+						</tr>
+					</thead>
+					<tbody>
+						{% if items is not empty %}
+							{% for item in items %}
+								<tr>
+									<td>#{{ item.id }}</td>
+									<td>{{ item.name }}</td>
+									<td>{{ item.memory }}MB</td>
+									<td>{{ item.disk }}MB</td>
+									<td>
+										<a href="{{ path('pterodactyl.config', {id: item.productId}) }}" class="btn btn-primary" data-toggle="tooltip" data-placement="top" title="{{item.name }}">
+											<i class="fas fa-edit"></i>
+										</a>
+									</td>
+								</tr>
+							{% endfor %}
+						{% else %}
+							<tr>
+								<td colspan="5">{{ trans("no_record") }}</td>
+							</tr>
+						{% endif %}
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+{% endblock %}

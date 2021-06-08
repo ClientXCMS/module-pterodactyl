@@ -1,0 +1,173 @@
+{% extends "@admin/layout.twig" %}
+{% block title trans('pterodactyl.config.title')%}
+{% block pagetitle trans('pterodactyl.config.title') %}
+{% block pagesubtitle trans('pterodactyl.config.subtitle') %}
+{% block style %}
+	<style>
+		.round {
+			line-height: 48px;
+			color: #ffffff;
+			width: 50px;
+			height: 50px;
+			display: inline-block;
+			font-weight: 400;
+			text-align: center;
+			border-radius: 100%;
+			background: #1e88e5;
+			margin-right: 10px;
+		}
+	</style>
+	 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pretty-checkbox@3.0/dist/pretty-checkbox.min.css">
+{% endblock %}
+{% block body %}
+	<form method="POST" action="{{ path('pterodactyl.config', {id: id})}}">
+		{{csrf_input() }}
+		<div class="row">
+			<div class="col-md-12 col-xl-8 col-sm-12">
+				<div class="card">
+					<div class="card-header">
+						<span class="round">
+							<i class="fas fa-cube"></i>
+						</span>
+						{{ trans('pterodactyl.form.resources.title') }}
+					</div>
+					<div class="card-body">
+						<div class="row">
+							<div class="col-md-6 col-sm-12">
+								{{ field('memory', item.memory ?? 1024,  trans('pterodactyl.form.resources.memory'),{type: 'number'})}}
+							</div>
+							<div class="col-md-6 col-sm-12">
+								{{ field('disk', item.disk ?? 1024,trans('pterodactyl.form.resources.disk'),  {type: 'number'})}}
+							</div>
+							<div class="col-md-6 col-sm-12">
+								{{ field('io',item.io ?? 10,  trans('pterodactyl.form.resources.io'))}}
+							</div>
+
+							<div class="col-md-6 col-sm-12">
+								{{ field('port_range', item.portrange ?? null, trans('pterodactyl.form.resources.portrange') ~ ' (' ~ trans("optional") ~ ")")}}
+							</div>
+							<div class="col-md-6 col-sm-12">
+								{{ field('swap', item.swap ?? -1, trans('pterodactyl.form.resources.swap'))}}
+							</div>
+							<div class="col-md-6 col-sm-12">
+								{{ field('cpu', item.cpu ?? 100,trans('pterodactyl.form.resources.cpu'),  {type: 'number'})}}
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="card">
+					<div class="card-header">
+						<span class="round">
+							<i class="fas fa-info"></i>
+						</span>
+						{{ trans('pterodactyl.form.core.title')}}</div>
+
+					<div class="card-body">
+						<div class="row">
+
+							<div class="col-md-3 col-sm-12">
+								{{ field('servername', item.servername, trans('pterodactyl.form.core.servername') ~ ' (' ~ trans("optional") ~ ")")}}
+							</div>
+							<div class="col-md-3 col-sm-12">
+								{{ field('egg_id', item.eggId ?? 1,trans('pterodactyl.form.core.egg'),  {type: 'number'})}}
+							</div>
+
+							<div class="col-md-3 col-sm-12">
+								{{ field('nest_id', item.nestId ?? 1,trans('pterodactyl.form.core.nest'),  {type: 'number'})}}
+							</div>
+							
+							<div class="col-md-3 col-sm-12">
+								{{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {type: 'number'})}}
+							</div>
+						</div>
+					</div>
+				</div>
+                
+				<div class="card">
+					<div class="card-header">
+						<span class="round">
+							<i class="fas fa-database"></i>
+						</span>
+						{{ trans('pterodactyl.form.features.title') }}</div>
+					<div class="card-body">
+						<div class="row">
+							<div class="col-md-6 col-sm-12">
+								{{ field('db', item.db, trans('pterodactyl.form.features.databases')  ~ ' (' ~ trans("optional") ~ ")")}}
+							</div>
+							<div class="col-md-6 col-sm-12">
+								{{ field('backups', item.backups, trans('pterodactyl.form.features.backups')  ~ ' (' ~ trans("optional") ~ ")")}}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="col-md-12 col-xl-4 col-sm-12">
+				<div class="card">
+					<div class="card-header">
+						<span class="round">
+							<i class="fas fa-redo-alt"></i>
+						</span>
+						{{ trans('pterodactyl.form.converter.title') }}
+					</div>
+					<div class="card-body">
+						<div class="row">
+							<div class="col-12">
+								{{ field('conv_gb', null, trans('pterodactyl.form.converter.gb'), {placeholder: true, label: false, type: 'number'}) }}
+							</div>
+							<div class="col-12">
+								{{ field('conv_mb', null, trans('pterodactyl.form.converter.mb'), {placeholder: true, label: false, type: 'number'}) }}
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="card">
+					<div class="card-header">
+						<span class="round">
+							<i class="fas fa-file"></i>
+						</span>
+						{{ trans('pterodactyl.form.configurations.title') }}</div>
+					<div class="card-body">
+						<div class="row">
+							<div class="col-md-12 col-sm-12">
+								{{ field('image', item.image, trans('pterodactyl.form.configurations.image')  ~ ' (' ~ trans("optional") ~ ")")}}
+							</div>
+							<div class="col-md-12 col-sm-12">
+								{{ field('startup', item.startup, trans('pterodactyl.form.configurations.startup')  ~ ' (' ~ trans("optional") ~ ")")}}
+							</div>
+							<div class="col-md-6 col-sm-12">
+							{{ custom_checkbox("dedicatedip", item.dedicatedip, trans('pterodactyl.form.configurations.dedicatedip'))}}
+
+							{{ custom_checkbox("oom_kill", item.oomKill, trans('pterodactyl.form.configurations.oomkiller'))}}
+							</div>
+							
+						</div>
+					</div>
+				</div>
+                
+				<button class="btn btn-primary">{{ trans("save")}}</button>
+			</div>
+		</div>
+		</form>
+	{% endblock %}
+
+	{% block scripts %}
+		<script>
+			$('#conv_mb').change(function () {
+let value = $(this).val();
+if (value != "") {
+$('#conv_gb').val(value * 1024);
+} else {
+$('#conv_gb').val();
+}
+})
+$('#conv_gb').change(function () {
+let value = $(this).val();
+if (value != "") {
+$('#conv_mb').val(value * 1024);
+} else {
+$('#conv_mb').val();
+}
+})
+		</script>
+	{% endblock %}
