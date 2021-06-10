@@ -5,13 +5,11 @@ namespace App\Pterodactyl\Actions;
 use App\Admin\DatabaseAdminAuth;
 use App\Shop\Services\ServiceService;
 use App\Pterodactyl\Http;
-use App\Pterodactyl\PterodactylConnection;
 use ClientX\Actions\Action;
 use ClientX\Auth;
 use ClientX\Session\FlashService;
 use GuzzleHttp\Psr7\Response;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Log\LoggerInterface;
 
 class PowerAction extends Action
 {
@@ -19,11 +17,9 @@ class PowerAction extends Action
     private ServiceService $service;
     private bool $inAdmin;
     private string $certif;
-    use PterodactylConnection;
 
-    public function __construct(LoggerInterface $logger, ServiceService $service, Auth $auth, DatabaseAdminAuth $admin, FlashService $flash, string $certif)
+    public function __construct(ServiceService $service, Auth $auth, DatabaseAdminAuth $admin, FlashService $flash, string $certif)
     {
-        $this->logger = $logger;
         $this->service = $service;
         $this->auth    = $auth;
         $this->flash = $flash;
@@ -49,12 +45,12 @@ class PowerAction extends Action
                     return new Response(404);
                 }
                 $service->server->setCertificate($this->certif);
-                $serverResult = $this->callApi($service->server, 'servers/external/' . $service->getId());
+                $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId());
                 if (!$serverResult->successful()) {
                     return new Response(404);
                 }
                 $attributes = $serverResult->data()->attributes;
-                $response = $this->callApi($service->server, 'servers/' . $attributes->identifier . "/power", ['signal' => $action], 'POST', true, 'client');
+                $response = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/power", ['signal' => $action], 'POST', true, 'client');
                 if ($response->successful()) {
                     $this->success('Done!');
                 } else {
@@ -69,12 +65,12 @@ class PowerAction extends Action
                 return new Response(404);
             }
             $service->server->setCertificate($this->certif);
-            $serverResult = $this->callApi($service->server, 'servers/external/' . $service->getId());
+            $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId());
             if (!$serverResult->successful()) {
                 return new Response(404);
             }
             $attributes = $serverResult->data()->attributes;
-            $response = $this->callApi($service->server, 'servers/' . $attributes->identifier . "/power", ['signal' => $action], 'POST', true, 'client');
+            $response = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/power", ['signal' => $action], 'POST', true, 'client');
 
             if ($response->successful()) {
                 $this->success('Done!');

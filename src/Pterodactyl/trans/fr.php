@@ -69,7 +69,7 @@ return [
             "core" => [
                 "title" => "Information",
                 "servername"=> "Nom du serveur",
-                "egg" => "ID Œuf Pterodactyl",
+                "egg" => "ID Egg Pterodactyl",
                 "nest" => "ID Nest Pterodactyl",
                 "location" => "ID Location Pterodactyl"
             ],

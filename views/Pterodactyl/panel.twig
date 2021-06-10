@@ -68,26 +68,16 @@
                 <div class="row">
                     {% for key,  values in stats %}
                 {% if inAdmin == false %}
-                
+                {% include "navigations/home.twig" with {'items': [
+                    {
+                        'name': "pterodactyl.form.resources." ~ key,
+                        'value': attribute(attributes.limits, key),
+                        'color': values[0],
+                        'icon': values[1],
+                        'col' : '6',
+                    }
+                ]} %}
 			
-                        <div class="col-xl-6 col-sm-12 col-md-12">
-
-                            <div class="card card-statistic-1">
-                                <div class="card-icon bg-{{ values[0] }}">
-                                    <i class="{{ values[1] }}"></i>
-                                </div>
-                                <div class="card-wrap">
-                                    <div class="card-header">
-                                        <h4>
-                                            {{ attribute(attributes.limits, key) }}
-                                        </h4>
-                                    </div>
-                                    <div class="card-body">
-                                        {{ trans("pterodactyl.form.resources." ~ key) }}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
                         {% else %}
                         <div class="col-xl-6 col-sm-12 col-md-12">
                         <div class="small-box bg-{{ values[0] }}">

@@ -7,7 +7,6 @@ use App\Admin\Database\ServerTable;
 use App\Admin\Entity\Server;
 use App\Pterodactyl\Database\PterodactylTable;
 use App\Pterodactyl\Database\ServersTable;
-use App\Pterodactyl\Entity\Credentials;
 use App\Shop\Entity\OrderItem;
 use App\Shop\Entity\Product;
 use ClientX\Helpers\Str;
@@ -23,16 +22,10 @@ use RuntimeException;
 
 class PterodactylServerType implements ServerTypeInterface
 {
-    private LoggerInterface $logger;
     private ServerTable $server;
     private PterodactylTable $pterodactyl;
     private ServersTable $servers;
     private Translater $translater;
-    private array $params;
-    use PterodactylConnection;
-
-
-
     public function __construct(
         LoggerInterface $logger,
         PterodactylTable $pterodactyl,
@@ -62,7 +55,7 @@ class PterodactylServerType implements ServerTypeInterface
             $this->error("linkserver");
         }
             $id = $serverData->data()->attributes->id;
-        $call = $this->callApi($service->server, "servers/$id/details", [
+        $call = Http::callApi($service->server, "servers/$id/details", [
             
             'name'          => $name,
             'description'   => $serverData->data()->attributes->description,
@@ -95,10 +88,10 @@ class PterodactylServerType implements ServerTypeInterface
             ->setIpaddress($params['ipaddress'])
             ->setCertificate($params['certificate'])
             ->setSecure($params['secure'] ?? false);
-            $response = $this->callApi($server, 'servers', [], 'GET', true)->getResponse();
-            $response2 = $this->callApi($server, '', [], 'GET', true, 'client')->getResponse();
+            $response = Http::callApi($server, 'servers', [], 'GET', true)->getResponse();
+            $response2 = Http::callApi($server, '', [], 'GET', true, 'client')->getResponse();
             $success = $response->getStatusCode() == 200 && $response2->getStatusCode() == 200;
-             $response = new Response($success ? 200 : 500, [], $success ? 'Application & Client : Success' : "Applications : " . $response->getBody()->__toString() . PHP_EOL . " Client : " . $response2->getBody()->__toString());
+            $response = new Response($success ? 200 : 500, [], $success ? 'Application & Client : Success' : "Applications : " . $response->getBody()->__toString() . PHP_EOL . " Client : " . $response2->getBody()->__toString());
         } catch (\Exception  $e) {
             $defaultResponse = new Response(500, [], $e->getMessage());
             $response = $e->getResponse() ?? $defaultResponse;
@@ -118,16 +111,17 @@ class PterodactylServerType implements ServerTypeInterface
         if (!$orderable instanceof Product) {
             return "failed";
         }
+        return "success";
         try {
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
-            $userResult = $this->callApi($item->getServer(), 'users/external/' . $user->getId());
+            $userResult = Http::callApi($item->getServer(), 'users/external/' . $user->getId());
             $data = [];
-                $userResult = $this->callApi($item->getServer(), 'users');
+                $userResult = Http::callApi($item->getServer(), 'users');
                 $data = array_merge($userResult->data()->data, $data);
                 $result = null;
                     foreach ($userResult->data()->data as $key => $value) {
-                        if ($value->attributes->email === $user->getEmail()) {
+                        if ($value->attributes->email == $user->getEmail()) {
                             $result = $value->attributes;
                             break;
                         }
@@ -136,13 +130,7 @@ class PterodactylServerType implements ServerTypeInterface
                     if ($result === null){
                         $result = $this->makeAccount($user, $item->getServer())->data()->attributes;
                     }
-
-            
-            if ($userResult->successful()) {
-                $userId = $result->id;
-            } else {
-                $this->error("createuser", $userResult->status());
-            }
+            $userId = $result->id;
             $nestId = $config->nestId;
             $eggId = $config->eggId;
             [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer());
@@ -162,6 +150,7 @@ class PterodactylServerType implements ServerTypeInterface
             $allocations = $config->allocations ?? 0;
             $backups = $config->backups;
 
+            
             $oom_disabled = $config->oomKill ? true : false;
 
             $serverData = [
@@ -193,7 +182,7 @@ class PterodactylServerType implements ServerTypeInterface
                 'start_on_completion' => true,
                 'external_id' => (string) $item->getService()->getId(),
             ];
-            $server = $this->callApi($item->getServer(), 'servers', $serverData, 'POST');
+            $server = Http::callApi($item->getServer(), 'servers', $serverData, 'POST');
             if ($server->status() === 400) {
                 $this->error("satisfying");
             }
@@ -239,11 +228,11 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error("linkserver");
             }
             $userId = $serverData->data()->attributes->user;
-            $userResult = $this->callApi($service->server, 'users/' . $userId);
+            $userResult = Http::callApi($service->server, 'users/' . $userId);
             if ($userResult->status() !== 200) {
                 $this->error("retrieveuser", $userResult->status());
             }
-            $updateResult = $this->callApi($service->server, 'users/' . $userId, [
+            $updateResult = Http::callApi($service->server, 'users/' . $userId, [
                 //'username' => $userResult->data()->attributes->username,
                 'email' => $userResult->data()->attributes->email,
                 'first_name' => $userResult->data()->attributes->first_name,
@@ -265,18 +254,18 @@ class PterodactylServerType implements ServerTypeInterface
 
     private function makeAccount(User $user, Server $server)
     {
-        return $this->callApi($server, 'users', [
+        return Http::callApi($server, 'users', [
             "username"      => Str::slugify($user->getName()) . $user->getId(),
             "email"         => $user->getEmail(),
             "first_name"    => $user->getFirstname(),
             "last_name"     => $user->getLastname(),
-            "external_id"   => (string)$user->getId(),
+            "external_id"   => (string)"CLIENTXCMS-". str_pad($user->getId(), 5),
         ], 'POST');
     }
 
     private function getServerId(int $serviceId, Server $server, bool $raw = false)
     {
-        $serverResult = $this->callApi($server, 'servers/external/' . $serviceId);
+        $serverResult = Http::callApi($server, 'servers/external/' . $serviceId);
         if ($serverResult->successful()) {
             if ($raw) {
                 return $serverResult;
@@ -286,7 +275,7 @@ class PterodactylServerType implements ServerTypeInterface
             $serverId = $this->servers->findServerIdFromServiceId($serviceId);
             if (!is_null($serverId)) {
                 if ($raw) {
-                    $serverResult = $this->callApi($server, 'servers/' . $serverId);
+                    $serverResult = Http::callApi($server, 'servers/' . $serverId);
                     if ($serverResult->successful()) {
                         return $serverResult;
                     } else {
@@ -301,7 +290,7 @@ class PterodactylServerType implements ServerTypeInterface
 
     private function getEnvFromNest(int $eggId, int $nestId, $server)
     {
-        $eggResult = $this->callApi($server, 'nests/' . $nestId . '/eggs/' . $eggId . "?include=variables");
+        $eggResult = Http::callApi($server, 'nests/' . $nestId . '/eggs/' . $eggId . "?include=variables");
         if (!$eggResult->successful()) {
             $this->error("geteggs", $eggResult->status());
         }
@@ -325,9 +314,9 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error($terms . "exist");
             }
             if ($method === 'DELETE') {
-                $action = $this->callApi($server, 'servers/' . $serverId, [], $method);
+                $action = Http::callApi($server, 'servers/' . $serverId, [], $method);
             } else {
-                $action = $this->callApi($server, 'servers/' . $serverId . '/' . $terms, [], $method);
+                $action = Http::callApi($server, 'servers/' . $serverId . '/' . $terms, [], $method);
             }
             if ($action->status() !== 204) {
                 $this->error($terms, $action->status());

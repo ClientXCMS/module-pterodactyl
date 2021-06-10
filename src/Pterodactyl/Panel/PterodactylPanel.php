@@ -1,18 +1,12 @@
 <?php
 namespace App\Pterodactyl\Panel;
 
-use App\Pterodactyl\PterodactylConnection;
+use App\Pterodactyl\Http;
 use App\Shop\Entity\Service;
 use App\Shop\Panel\PanelInterface;
 use ClientX\Renderer\RendererInterface;
-use Psr\Log\LoggerInterface;
-
 class PterodactylPanel implements PanelInterface
 {
-
-    use PterodactylConnection;
-
-    
     const STATS = [
         "memory" => ["secondary", "fas fa-atom"],
         "swap" => ["info", "fas fa-memory", "used"],
@@ -20,24 +14,18 @@ class PterodactylPanel implements PanelInterface
         "io" => ["danger", "fas fa-hdd"],
         "cpu" => ["dark", "fas fa-hdd"]
     ];
-
-    public function __construct(LoggerInterface $logger)
-    {
-        $this->logger = $logger;
-    }
-
     
     public function render(RendererInterface $renderer, Service $service): string
     {
         $data = [];
-        $serverResult = $this->callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
+        $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
         if (!$serverResult->successful()) {
             $data['errors'] = "Server not found";
             return $renderer->render("@pterodactyl/panel", compact('data'));
         }
         $attributes = $serverResult->data()->attributes;
 
-        $utilizationResult = $this->callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
+        $utilizationResult = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
 
         
 
@@ -66,17 +54,14 @@ class PterodactylPanel implements PanelInterface
     {
         
         $data = [];
-        $serverResult = $this->callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
+        $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
         if (!$serverResult->successful()) {
             $data['errors'] = "Server not found";
             return $renderer->render("@pterodactyl/panel", compact('data'));
         }
         $attributes = $serverResult->data()->attributes;
 
-        $utilizationResult = $this->callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
-
-        
-
+        $utilizationResult = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
         if (!$attributes->container->installed) {
             $data['errors'] = "Server not installed";
         }
