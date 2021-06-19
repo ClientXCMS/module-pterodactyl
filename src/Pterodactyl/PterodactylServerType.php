@@ -111,7 +111,6 @@ class PterodactylServerType implements ServerTypeInterface
         if (!$orderable instanceof Product) {
             return "failed";
         }
-        return "success";
         try {
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
