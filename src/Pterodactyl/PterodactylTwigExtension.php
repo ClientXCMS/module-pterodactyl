@@ -40,7 +40,7 @@ class PterodactylTwigExtension extends AbstractExtension {
         return "info";
     }
     public function online($status) {
-        return $status->current_state === 'online';
+        return $status->current_state === 'runnnig';
     }
     
     public function offline($status) {
@@ -52,7 +52,7 @@ class PterodactylTwigExtension extends AbstractExtension {
         $class = null;
         $content = null;
         switch ($value) {
-            case'online':
+            case'runnnig':
                 $class = "success";
                 $content = $this->translater->trans("pterodactyl.online");
                 break;
