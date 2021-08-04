@@ -1,10 +1,12 @@
 <?php
+
 namespace App\Pterodactyl\Panel;
 
 use App\Pterodactyl\Http;
 use App\Shop\Entity\Service;
 use App\Shop\Panel\PanelInterface;
 use ClientX\Renderer\RendererInterface;
+
 class PterodactylPanel implements PanelInterface
 {
     const STATS = [
@@ -14,7 +16,7 @@ class PterodactylPanel implements PanelInterface
         "io" => ["danger", "fas fa-hdd"],
         "cpu" => ["dark", "fas fa-hdd"]
     ];
-    
+
     public function render(RendererInterface $renderer, Service $service): string
     {
         $data = [];
@@ -27,7 +29,7 @@ class PterodactylPanel implements PanelInterface
 
         $utilizationResult = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
 
-        
+
 
         if (!$attributes->container->installed) {
             $data['errors'] = "Server not installed";
@@ -35,16 +37,20 @@ class PterodactylPanel implements PanelInterface
         $schema = $service->server->isSecure() ? 'https://' : 'http://';
         $ip = $service->server->getIpaddress();
         $data['href'] =  sprintf('%s%s/server/%s', $schema, $ip, $attributes->identifier);
-    
+
         if ($attributes->suspended) {
             $data['errors'] = "Server suspended";
         }
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
-        $data['ips'] = collect($attributes->relationships->allocations->data)->map(function($data){
-            return $data->attributes->alias ? $data->attributes->alias : $data->attributes->ip  . ":" . $data->attributes->port;
-        })->join(',');
+
+        
+        if (property_exists($attributes->relationships->allocations, 'data')) {
+            $data['ips'] = collect($attributes->relationships->allocations->data)->map(function ($data) {
+                return $data->attributes->alias ? $data->attributes->alias : $data->attributes->ip  . ":" . $data->attributes->port;
+            })->join(',');
+        }
         $data['inAdmin'] = false;
         $data['stats'] = self::STATS;
         return $renderer->render("@pterodactyl/panel", $data);
@@ -52,7 +58,7 @@ class PterodactylPanel implements PanelInterface
 
     public function renderAdmin(RendererInterface $renderer, Service $service): string
     {
-        
+
         $data = [];
         $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
         if (!$serverResult->successful()) {
@@ -69,7 +75,7 @@ class PterodactylPanel implements PanelInterface
         $schema = $service->server->isSecure() ? 'https://' : 'http://';
         $ip = $service->server->getIpaddress();
         $data['href'] =  sprintf('%s%s/server/%s', $schema, $ip, $attributes->identifier);
-    
+
         if ($attributes->suspended) {
             $data['errors'] = "Server suspended";
             return $renderer->render("@pterodactyl/panel", $data);
@@ -77,9 +83,12 @@ class PterodactylPanel implements PanelInterface
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
-        $data['ips'] = collect($attributes->relationships->allocations->data)->map(function($data){
-            return $data->attributes->alias ? $data->attributes->alias : $data->attributes->ip  . ":" . $data->attributes->port;
-        })->join(',');
+
+        if (property_exists($attributes->relationships->allocations, 'data')) {
+            $data['ips'] = collect($attributes->relationships->allocations->data)->map(function ($data) {
+                return $data->attributes->alias ? $data->attributes->alias : $data->attributes->ip  . ":" . $data->attributes->port;
+            })->join(',');
+        }
         $data['inAdmin'] = true;
         $data['stats'] = self::STATS;
         return $renderer->render("@pterodactyl/panel", $data);

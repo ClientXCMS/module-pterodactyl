@@ -25,7 +25,7 @@ class PterodactylModule extends Module
         $renderer->addPath('pterodactyl_admin', __DIR__ . '/Views');
         
        $prefix = $container->get("clientarea.prefix");
-       $router->get("$prefix/pterodactyl/[*:power]/[i:id]", PowerAction::class, 'pterodactyl.power');
+       $router->get("/api/Pterodactyl/[*:power]/[i:id]", PowerAction::class, 'pterodactyl.power');
         /** @var Router */
         if ($container->has('admin.prefix')) {
             $prefix = $container->get('admin.prefix') . '/pterodactyl';

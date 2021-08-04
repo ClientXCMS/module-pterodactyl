@@ -8,7 +8,13 @@ use Twig\TwigTest;
 
 class PterodactylTwigExtension extends AbstractExtension {
 
+
     private Translater $translater;
+    const ONLINE = "running";
+    const OFFLINE = "offline";
+    const STARTING = "starting";
+    const STOPPING = "stopping";
+    const PREFIX = "pterodactyl";
     public function __construct(Translater $translater)
     {
         $this->translater = $translater;
@@ -17,16 +23,16 @@ class PterodactylTwigExtension extends AbstractExtension {
     public function getFilters()
     {
         return [
-            new TwigFilter('pterodactyl_server_status', [$this, 'status'], ['is_safe' => ['html']]),
-            new TwigFilter('pterodactyl_server_cpucolor', [$this, 'color'], ['is_safe' => ['html']]),
+            new TwigFilter(self::PREFIX .'_server_status', [$this, 'status'], ['is_safe' => ['html']]),
+            new TwigFilter(self::PREFIX .'_server_cpucolor', [$this, 'color'], ['is_safe' => ['html']]),
         ];
     }
 
     public function getTests()
     {
         return [
-            new TwigTest('pterodactyl_online', [$this, 'online']),
-            new TwigTest('pterodactyl_offline', [$this, 'offline']),
+            new TwigTest(self::PREFIX.'_online', [$this, 'online']),
+            new TwigTest(self::PREFIX.'_offline', [$this, 'offline']),
         ];
     }
 
@@ -40,11 +46,11 @@ class PterodactylTwigExtension extends AbstractExtension {
         return "info";
     }
     public function online($status) {
-        return $status->current_state === 'runnnig';
+        return $status->current_state === self::ONLINE || $status->current_state === self::STARTING;
     }
     
     public function offline($status) {
-        return $status->current_state ==='offline';
+        return $status->current_state === self::OFFLINE || $status->current_state === self::STOPPING;
     }
 
     public function status($status, bool $html = true){
@@ -52,23 +58,23 @@ class PterodactylTwigExtension extends AbstractExtension {
         $class = null;
         $content = null;
         switch ($value) {
-            case'runnnig':
+            case self::ONLINE:
                 $class = "success";
-                $content = $this->translater->trans("pterodactyl.online");
+                $content = $this->translater->trans(self::PREFIX . ".online");
                 break;
                 
-            case'starting':
+            case self::STARTING:
                 $class = "success";
                 $content = "Starting";
                 break;
                 
-            case'stopping':
+            case self::STOPPING:
                 $class = "success";
                 $content = "Stopping";
                 break;
-            case 'offline':
+            case self::STOPPING:
                 $class = "danger";
-                $content = $this->translater->trans("pterodactyl.offline");
+                $content = $this->translater->trans(self::PREFIX .".offline");
                 break;
             default:
                 $class = "danger";
