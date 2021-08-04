@@ -72,7 +72,7 @@ class PterodactylTwigExtension extends AbstractExtension {
                 $class = "success";
                 $content = "Stopping";
                 break;
-            case self::STOPPING:
+            case self::OFFLINE:
                 $class = "danger";
                 $content = $this->translater->trans(self::PREFIX .".offline");
                 break;
