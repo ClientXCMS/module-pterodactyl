@@ -3,10 +3,6 @@
 namespace App\Pterodactyl\Actions;
 
 use App\Pterodactyl\Database\PterodactylTable;
-use App\Admin\Entity\Server;
-use App\Admin\Database\ServerTable;
-use App\Admin\Entity\Server;
-use App\Wisp\Http;
 use ClientX\Actions\ConfigAction;
 use ClientX\Services\ConfigActionService as Config;
 use ClientX\Renderer\RendererInterface as Renderer;
@@ -26,23 +22,21 @@ class PterodactylConfigAction extends ConfigAction
     protected string $viewPath = "@pterodactyl_admin/config";
     protected array $types = ["pterodactyl"];
 
-    const DELIMITER = "---------";
-    public function __construct(Router $router, Config $service, Renderer $renderer, PterodactylTable $table, ServerTable $serverTable)
+    public function __construct(Router $router, Config $service, Renderer $renderer, PterodactylTable $table)
     {
         parent::__construct($router, $service, $renderer, $table);
-        $this->servers = $serverTable->findIn($this->types, 'type')->fetchAll();
-        $this->table = $table;
-
     }
 
     public function validate(array $data): Validator
     {
         $validator = (new Validator($data))
-            ->numeric('memory', 'disk', 'io', 'swap', 'cpu')
+
+            ->numeric('memory', 'disk', 'io', 'swap', 'cpu', 'egg_id', 'nest_id', 'location_id')
             ->between('io', 9, 9999)
             ->min(-1, "swap")
             ->min(0, "disk", "cpu", "memory")
-            ->notEmpty('memory', 'disk', 'io', 'swap', 'cpu', 'egg_id', 'location_id');
+            ->positive('egg_id', 'nest_id', 'location_id')
+            ->notEmpty('memory', 'disk', 'io', 'cpu', 'egg_id', 'nest_id', 'location_id');
         if (!empty($data['db'])) {
             $validator->min(0, "db");
         }
@@ -55,48 +49,4 @@ class PterodactylConfigAction extends ConfigAction
         }
         return $validator;
     }
-
-    protected function formParams(array $params)
-    {
-        $params = array_merge($params, $this->callApi());
-        $params['DELIMITER'] = self::DELIMITER;
-        return parent::formParams($params);
-    }
-
-    private function callApi(): array
-    {
-        $nests = collect($this->servers)->map(function (Server $server) {
-            $data = Http::callApi($server, 'nests')->data()->data;
-            return collect($data)->mapWithKeys(function ($data, $id) use ($server) {
-                $attr = $data->attributes;
-                $nestId = $attr->id;
-                $nest = $attr;
-                $data = Http::callApi($server, "nests/$nestId/eggs")->data()->data;
-                $eggs = collect($data)->mapWithKeys(function ($data, $id) use ($nest) {
-
-                    $attr = $data->attributes;
-                    return [join(self::DELIMITER, [$attr->id, $nest->id]) => $attr->name . " (" . $nest->name . ")"];
-                })->toArray();
-                return [$id => [
-                    'serverId' => $server->getId(),
-                    'nestId' => $nestId,
-                    'eggs' => $eggs
-                ]];
-            })->toArray();
-        })->toArray();
-        $locations = collect($this->servers)->mapWithKeys(function (Server $server) {
-            $data = Http::callApi($server, 'locations')->data()->data;
-            return collect($data)->mapWithKeys(function ($data) use ($server) {
-                $attr = $data->attributes;
-                return [$attr->id => $attr->short];
-            })->toArray();
-        })->toArray();
-        $eggs = collect($nests)->mapWithKeys(function (array $nest) {
-            return collect($nest)->mapWithKeys(function ($nest) {
-                return $nest['eggs'];
-            })->toArray();
-        })->toArray();
-        return compact('locations', 'eggs');
-    }
-    
 }
