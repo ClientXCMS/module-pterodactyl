@@ -5,7 +5,7 @@ namespace App\Pterodactyl\Actions;
 use App\Pterodactyl\Database\PterodactylTable;
 use App\Admin\Entity\Server;
 use App\Admin\Database\ServerTable;
-use App\Wisp\Http;
+use App\Pterodactyl\Http;
 use ClientX\Actions\ConfigAction;
 use ClientX\Services\ConfigActionService as Config;
 use ClientX\Renderer\RendererInterface as Renderer;
