@@ -6,6 +6,8 @@ use App\Pterodactyl\Http;
 use App\Shop\Entity\Service;
 use App\Shop\Panel\PanelInterface;
 use ClientX\Renderer\RendererInterface;
+use App\Auth\Database\UserTable;
+
 
 class PterodactylPanel implements PanelInterface
 {
@@ -16,6 +18,14 @@ class PterodactylPanel implements PanelInterface
         "io" => ["danger", "fas fa-hdd"],
         "cpu" => ["dark", "fas fa-hdd"]
     ];
+
+     
+	private UserTable $table;
+	
+	public function __construct(UserTable $table)
+	{
+		$this->table = $table;
+	}
 
     public function render(RendererInterface $renderer, Service $service): string
     {
@@ -38,6 +48,12 @@ class PterodactylPanel implements PanelInterface
             $data['errors'] = "Server suspended";
             return $renderer->render("@pterodactyl/panel", compact('data'));
         }
+        
+        
+		if (property_exists($utilizationResult->data(), 'errors')){
+            $data['errors'] = $utilizationResult->data()->errors[0]->detail;
+            return $renderer->render("@pterodactyl/panel", compact('data'));
+		}
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
@@ -51,6 +67,8 @@ class PterodactylPanel implements PanelInterface
                 return $data->attributes->alias ? $data->attributes->alias : $data->attributes->ip  . ":" . $data->attributes->port;
             })->join(',');
         }
+        
+		$data['user'] = $this->table->find($service->getUserId());
         $data['inAdmin'] = false;
         $data['stats'] = self::STATS;
         return $renderer->render("@pterodactyl/panel", $data);
@@ -72,6 +90,8 @@ class PterodactylPanel implements PanelInterface
             $data['errors'] = "Server not installed";
             return $renderer->render("@pterodactyl/panel", compact('data'));
         }
+        
+		$data['user'] = $this->table->find($service->getUserId());
         $schema = $service->server->isSecure() ? 'https://' : 'http://';
         $ip = $service->server->getIpaddress();
         $data['href'] =  sprintf('%s%s/server/%s', $schema, $ip, $attributes->identifier);
@@ -80,6 +100,12 @@ class PterodactylPanel implements PanelInterface
             $data['errors'] = "Server suspended";
             return $renderer->render("@pterodactyl/panel", compact('data'));
         }
+        
+        
+		if (property_exists($utilizationResult->data(), 'errors')){
+            $data['errors'] = $utilizationResult->data()->errors[0]->detail;
+            return $renderer->render("@pterodactyl/panel", compact('data'));
+		}
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
