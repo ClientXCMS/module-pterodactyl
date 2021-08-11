@@ -65,21 +65,15 @@
 
 					<div class="card-body">
 						<div class="row">
-
-							<div class="col-md-3 col-sm-12">
-								{{ field('servername', item.servername, trans('pterodactyl.form.core.servername') ~ ' (' ~ trans("optional") ~ ")")}}
-							</div>
-							<div class="col-md-3 col-sm-12">
-								{{ field('egg_id', item.eggId ?? 1,trans('pterodactyl.form.core.egg'),  {type: 'number'})}}
-							</div>
-
-							<div class="col-md-3 col-sm-12">
-								{{ field('nest_id', item.nestId ?? 1,trans('pterodactyl.form.core.nest'),  {type: 'number'})}}
-							</div>
-							
-							<div class="col-md-3 col-sm-12">
-								{{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {type: 'number'})}}
-							</div>
+ <div class="col-md-4 col-sm-12">
+                                {{ field('servername', item.servername, trans('pterodactyl.form.core.servername') ~ ' (' ~ trans("optional") ~ ")") }}
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                {{ field('egg_id', item.eggId ~ DELIMITER ~ item.nestId ?? 1,trans('pterodactyl.form.core.egg'),  {options:eggs}) }}
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                {{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {options:locations}) }}
+                            </div>
 						</div>
 					</div>
 				</div>
