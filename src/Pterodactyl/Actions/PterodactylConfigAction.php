@@ -5,8 +5,7 @@ namespace App\Pterodactyl\Actions;
 use App\Pterodactyl\Database\PterodactylTable;
 use App\Admin\Entity\Server;
 use App\Admin\Database\ServerTable;
-use App\Admin\Entity\Server;
-use App\Wisp\Http;
+use App\Pterodactyl\PterodactylTrait;
 use ClientX\Actions\ConfigAction;
 use ClientX\Services\ConfigActionService as Config;
 use ClientX\Renderer\RendererInterface as Renderer;
@@ -27,12 +26,15 @@ class PterodactylConfigAction extends ConfigAction
     protected array $types = ["pterodactyl"];
 
     const DELIMITER = "---------";
+
+    use PterodactylTrait;
+
     public function __construct(Router $router, Config $service, Renderer $renderer, PterodactylTable $table, ServerTable $serverTable)
     {
         parent::__construct($router, $service, $renderer, $table);
         $this->servers = $serverTable->findIn($this->types, 'type')->fetchAll();
         $this->table = $table;
-
+        $this->changeEggs($this->service->getConfig());
     }
 
     public function validate(array $data): Validator
@@ -42,7 +44,7 @@ class PterodactylConfigAction extends ConfigAction
             ->between('io', 9, 9999)
             ->min(-1, "swap")
             ->min(0, "disk", "cpu", "memory")
-            ->notEmpty('memory', 'disk', 'io', 'swap', 'cpu', 'egg_id', 'location_id');
+            ->notEmpty('memory', 'disk', 'io', 'swap', 'cpu', 'location_id');
         if (!empty($data['db'])) {
             $validator->min(0, "db");
         }
@@ -98,5 +100,5 @@ class PterodactylConfigAction extends ConfigAction
         })->toArray();
         return compact('locations', 'eggs');
     }
-    
+
 }

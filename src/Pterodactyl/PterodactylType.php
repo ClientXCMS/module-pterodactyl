@@ -22,6 +22,6 @@ class PterodactylType implements ProductTypeInterface
 
     public function getData(): ?string
     {
-        return null;
+        return PterodactylData::class;
     }
 }

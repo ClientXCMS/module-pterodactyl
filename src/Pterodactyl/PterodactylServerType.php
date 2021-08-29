@@ -9,6 +9,7 @@ use App\Pterodactyl\Database\PterodactylTable;
 use App\Pterodactyl\Database\ServersTable;
 use App\Shop\Entity\OrderItem;
 use App\Shop\Entity\Product;
+use App\Wisp\Http;
 use ClientX\Helpers\Str;
 use ClientX\Response\ConnectionResponse;
 use ClientX\ServerTypeInterface;
@@ -26,15 +27,18 @@ class PterodactylServerType implements ServerTypeInterface
     private PterodactylTable $pterodactyl;
     private ServersTable $servers;
     private Translater $translater;
+    private LoggerInterface $logger;
+
     public function __construct(
         LoggerInterface $logger,
         PterodactylTable $pterodactyl,
         ServersTable $servers,
         ServerTable $server,
         Translater $translater
-    ) {
+    )
+    {
         $this->logger = $logger;
-        $this->server  = $server;
+        $this->server = $server;
         $this->servers = $servers;
         $this->pterodactyl = $pterodactyl;
         $this->translater = $translater;
@@ -42,8 +46,8 @@ class PterodactylServerType implements ServerTypeInterface
 
     public function findServer(OrderItem $item): ?Server
     {
-        if ($item->getService() != null){
-        return $this->server->find($item->getService()->server->getId());
+        if ($item->getService() != null) {
+            return $this->server->find($item->getService()->server->getId());
         }
         return $this->server->findFirst($this->for());
     }
@@ -54,40 +58,43 @@ class PterodactylServerType implements ServerTypeInterface
         if (!isset($serverData)) {
             $this->error("linkserver");
         }
-            $id = $serverData->data()->attributes->id;
+        $id = $serverData->data()->attributes->id;
         $call = Http::callApi($service->server, "servers/$id/details", [
-            
-            'name'          => $name,
-            'description'   => $serverData->data()->attributes->description,
-            'external_id'   => $serverData->data()->attributes->external_id,
-            'user'          => $serverData->data()->attributes->user
+
+            'name' => $name,
+            'description' => $serverData->data()->attributes->description,
+            'external_id' => $serverData->data()->attributes->external_id,
+            'user' => $serverData->data()->attributes->user
         ], 'PATCH');
         return "success";
     }
 
-    public function for():array
+    public function for(): array
     {
         return [
             "pterodactyl",
         ];
     }
-    public function type():string
+
+    public function type(): string
     {
         return "pterodactyl";
     }
-    public function name():string
+
+    public function name(): string
     {
         return "Pterodactyl";
     }
+
     public function testConnection(array $params): ConnectionResponse
     {
         try {
-            $server =(new Server())
-            ->setUsername($params['username'])
-            ->setPassword($params['password'])
-            ->setIpaddress($params['ipaddress'])
-            ->setCertificate($params['certificate'])
-            ->setSecure($params['secure'] ?? false);
+            $server = (new Server())
+                ->setUsername($params['username'])
+                ->setPassword($params['password'])
+                ->setIpaddress($params['ipaddress'])
+                ->setCertificate($params['certificate'])
+                ->setSecure($params['secure'] ?? false);
             $response = Http::callApi($server, 'servers', [], 'GET', true)->getResponse();
             $response2 = Http::callApi($server, '', [], 'GET', true, 'client')->getResponse();
             $success = $response->getStatusCode() == 200 && $response2->getStatusCode() == 200;
@@ -105,6 +112,7 @@ class PterodactylServerType implements ServerTypeInterface
             ->notEmpty('ipaddress', 'password', 'username')
             ->inArray('secure', [0, 1]);
     }
+
     public function createAccount(OrderItem $item): string
     {
         $orderable = $item->getItem()->getOrderable();
@@ -112,27 +120,31 @@ class PterodactylServerType implements ServerTypeInterface
             return "failed";
         }
         try {
+
+            $params = $item->getData();
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
             $userResult = Http::callApi($item->getServer(), 'users/external/' . $user->getId());
             $data = [];
-                $userResult = Http::callApi($item->getServer(), 'users');
-                $data = array_merge($userResult->data()->data, $data);
-                $result = null;
-                    foreach ($userResult->data()->data as $key => $value) {
-                        if ($value->attributes->email == $user->getEmail()) {
-                            $result = $value->attributes;
-                            break;
-                        }
+            $userResult = Http::callApi($item->getServer(), 'users');
 
-                    }
-                    if ($result === null){
-                        $result = $this->makeAccount($user, $item->getServer())->data()->attributes;
-                    }
+            $data = array_merge($userResult->data()->data, $data);
+            $result = null;
+            foreach ($userResult->data()->data as $key => $value) {
+                if ($value->attributes->email == $user->getEmail()) {
+                    $result = $value->attributes;
+                    break;
+                }
+
+            }
+            if ($result === null) {
+                $result = $this->makeAccount($user, $item->getServer())->data()->attributes;
+            }
             $userId = $result->id;
-            $nestId = $config->nestId;
-            $eggId = $config->eggId;
-            [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer());
+
+            $nestId = $params['nestId'];
+            $eggId = $params['eggId'];
+            [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer(), $params);
             $name = $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId();
             $memory = $config->memory;
             $swap = $config->swap;
@@ -140,7 +152,7 @@ class PterodactylServerType implements ServerTypeInterface
             $cpu = $config->cpu;
             $disk = $config->disk;
             $location_id = $config->locationId;
-            $dedicated_ip = $config->dedicatedip ? true : false;
+            $dedicated_ip = (bool)$config->dedicatedip;
             $port_range = $config->portRange;
             $port_range = isset($portRange) ? explode(',', $portRange) : [];
             $image = $config->image ?? $eggResult->data()->attributes->docker_image;
@@ -149,37 +161,37 @@ class PterodactylServerType implements ServerTypeInterface
             $allocations = $config->allocations ?? 0;
             $backups = $config->backups;
 
-            
-            $oom_disabled = $config->oomKill ? true : false;
+
+            $oom_disabled = (bool)$config->oomKill;
 
             $serverData = [
                 'name' => $name,
-                'user' => (int) $userId,
-                'nest' => (int) $nestId,
-                'egg' => (int) $eggId,
+                'user' => (int)$userId,
+                'nest' => (int)$nestId,
+                'egg' => (int)$eggId,
                 'docker_image' => $image,
                 'startup' => $startup,
                 'oom_disabled' => $oom_disabled,
                 'limits' => [
-                    'memory' => (int) $memory,
-                    'swap' => (int) $swap,
-                    'io' => (int) $io,
-                    'cpu' => (int) $cpu,
-                    'disk' => (int) $disk,
+                    'memory' => (int)$memory,
+                    'swap' => (int)$swap,
+                    'io' => (int)$io,
+                    'cpu' => (int)$cpu,
+                    'disk' => (int)$disk,
                 ],
                 'feature_limits' => [
-                    'databases' => $databases ? (int) $databases : null,
-                    'allocations' => (int) $allocations,
-                    'backups' => (int) $backups,
+                    'databases' => $databases ? (int)$databases : null,
+                    'allocations' => (int)$allocations,
+                    'backups' => (int)$backups,
                 ],
                 'deploy' => [
-                    'locations' => [(int) $location_id],
+                    'locations' => [(int)$location_id],
                     'dedicated_ip' => $dedicated_ip,
                     'port_range' => $port_range,
                 ],
                 'environment' => $environment,
                 'start_on_completion' => true,
-                'external_id' => (string) $item->getService()->getId(),
+                'external_id' => (string)$item->getService()->getId(),
             ];
             $server = Http::callApi($item->getServer(), 'servers', $serverData, 'POST');
             if ($server->status() === 400) {
@@ -199,14 +211,17 @@ class PterodactylServerType implements ServerTypeInterface
     {
         return $this->suspendAccount($service);
     }
+
     public function suspendAccount(Service $service): string
     {
         return $this->changeAccountStatus("POST", "suspend", $service->getId(), $service->server);
     }
+
     public function unsuspendAccount(Service $service): string
     {
         return $this->changeAccountStatus("POST", "unsuspend", $service->getId(), $service->server);
     }
+
     public function terminateAccount(Service $service): string
     {
         return $this->changeAccountStatus("DELETE", "terminate", $service->getId(), $service->server);
@@ -215,11 +230,11 @@ class PterodactylServerType implements ServerTypeInterface
 
     public function changePassword(Service $service, ?string $password = null): string
     {
-        if ($password === null){
+        if ($password === null) {
             return 'can';
         }
         try {
-            if ($password === '' ||$password === null) {
+            if ($password === '' || $password === null) {
                 $this->error("pdwempty");
             }
             $serverData = $this->getServerId($service->getId(), $service->server, true);
@@ -246,6 +261,7 @@ class PterodactylServerType implements ServerTypeInterface
         }
         return "success";
     }
+
     public function changePackage(Service $service, OrderItem $item): string
     {
         return "failed";
@@ -254,11 +270,11 @@ class PterodactylServerType implements ServerTypeInterface
     private function makeAccount(User $user, Server $server)
     {
         return Http::callApi($server, 'users', [
-            "username"      => Str::slugify($user->getName()) . $user->getId(),
-            "email"         => $user->getEmail(),
-            "first_name"    => $user->getFirstname(),
-            "last_name"     => $user->getLastname(),
-            "external_id"   => (string)"CLIENTXCMS-". str_pad($user->getId(), 5),
+            "username" => Str::slugify($user->getName()) . $user->getId(),
+            "email" => $user->getEmail(),
+            "first_name" => $user->getFirstname(),
+            "last_name" => $user->getLastname(),
+            "external_id" => (string)"CLIENTXCMS-" . str_pad($user->getId(), 5),
         ], 'POST');
     }
 
@@ -286,8 +302,7 @@ class PterodactylServerType implements ServerTypeInterface
         }
     }
 
-
-    private function getEnvFromNest(int $eggId, int $nestId, $server)
+    private function getEnvFromNest(int $eggId, int $nestId, $server, $data)
     {
         $eggResult = Http::callApi($server, 'nests/' . $nestId . '/eggs/' . $eggId . "?include=variables");
         if (!$eggResult->successful()) {
@@ -298,7 +313,7 @@ class PterodactylServerType implements ServerTypeInterface
             $attr = $val->attributes;
             $var = $attr->env_variable;
             $default = $attr->default_value;
-            $envName = $params[$attr->env_variable] ??  $default;
+            $envName = $data[$attr->env_variable] ?? $default;
             $environment[$var] = $envName;
         }
         return [$environment, $eggResult];

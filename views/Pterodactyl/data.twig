@@ -1,0 +1,18 @@
+<div class="col-md-12 col-xl-{{ inAdmin is not defined ? 12 : 6 }} col-sm-12">
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-12">
+                    {{ field("eggname", item.eggname, "Egg pterodactyl", {options: eggs}) }}
+                </div>
+                {% if inFiveM %}
+
+                    <div class="col-12">
+                        {{ field("FIVEM_LICENSE", item.FIVEM_LICENSE, "Clé FiveM") }}
+                    </div>
+                {% endif %}
+                <input type="hidden" value="{{ productId }}" name="productId">
+            </div>
+        </div>
+    </div>
+</div>
