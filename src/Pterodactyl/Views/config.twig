@@ -33,18 +33,14 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6 col-sm-12">
+                            <div class="col-md-4 col-sm-12">
                                 {{ field('memory', item.memory ?? 1024,  trans('pterodactyl.form.resources.memory'),{type: 'number'}) }}
                             </div>
-                            <div class="col-md-6 col-sm-12">
+                            <div class="col-md-4 col-sm-12">
                                 {{ field('disk', item.disk ?? 1024,trans('pterodactyl.form.resources.disk'),  {type: 'number'}) }}
                             </div>
-                            <div class="col-md-6 col-sm-12">
+                            <div class="col-md-4 col-sm-12">
                                 {{ field('io',item.io ?? 10,  trans('pterodactyl.form.resources.io')) }}
-                            </div>
-
-                            <div class="col-md-6 col-sm-12">
-                                {{ field('port_range', item.portrange ?? null, trans('pterodactyl.form.resources.portrange') ~ ' (' ~ trans("optional") ~ ")") }}
                             </div>
                             <div class="col-md-6 col-sm-12">
                                 {{ field('swap', item.swap ?? -1, trans('pterodactyl.form.resources.swap')) }}
@@ -74,7 +70,7 @@
                             </div>
 
                             <div class="col-md-4 col-sm-12">
-                                {{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {type: 'number'}) }}
+                                {{ field('location_id', item.locationId ?? 1,trans('Wisp.form.core.location'),  {options:locations}) }}
                             </div>
                         </div>
                     </div>

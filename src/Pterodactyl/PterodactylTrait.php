@@ -6,6 +6,7 @@ namespace App\Pterodactyl;
 use App\Pterodactyl\Database\PterodactylTable;
 use ClientX\App;
 use Phinx\Migration\Manager;
+use App\Pterodactyl\Actions\PterodactylConfigAction;
 use Symfony\Component\Console\Input\StringInput;
 use Symfony\Component\Console\Output\NullOutput;
 
@@ -25,9 +26,10 @@ trait PterodactylTrait
         $configs = $table->findAll2();
         foreach ($configs as $config) {
             if (empty($config->eggs)) {
-                $eggs = json_encode([$config->eggId]);
+
+                $eggs = [join(PterodactylConfigAction::DELIMITER, [$config->eggId, $config->nestId])];
                 $configId = $config->productId;
-                $this->service->getConfig()->updateConfig($config->id, $configId, ['eggs' => $eggs]);
+                $table->updateConfig($config->id, $configId, ['eggs' => $eggs]);
             }
         }
     }

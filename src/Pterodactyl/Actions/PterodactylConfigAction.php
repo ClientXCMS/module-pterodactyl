@@ -5,6 +5,7 @@ namespace App\Pterodactyl\Actions;
 use App\Pterodactyl\Database\PterodactylTable;
 use App\Admin\Entity\Server;
 use App\Admin\Database\ServerTable;
+use App\Pterodactyl\Http;
 use App\Pterodactyl\PterodactylTrait;
 use ClientX\Actions\ConfigAction;
 use ClientX\Services\ConfigActionService as Config;
@@ -26,14 +27,33 @@ class PterodactylConfigAction extends ConfigAction
     protected array $types = ["pterodactyl"];
 
     const DELIMITER = "---------";
+    private array $servers;
+    private PterodactylTable $table;
 
     use PterodactylTrait;
 
-    public function __construct(Router $router, Config $service, Renderer $renderer, PterodactylTable $table, ServerTable $serverTable)
-    {
+    /**
+     * PterodactylConfigAction constructor.
+     * @param \ClientX\Router $router
+     * @param \ClientX\Services\ConfigActionService $service
+     * @param \ClientX\Renderer\RendererInterface $renderer
+     * @param \App\Pterodactyl\Database\PterodactylTable $table
+     * @param \App\Admin\Database\ServerTable $serverTable
+     */
+    public function __construct(
+        Router $router,
+        Config $service,
+        Renderer $renderer,
+        PterodactylTable $table,
+        ServerTable $serverTable
+    ) {
         parent::__construct($router, $service, $renderer, $table);
-        $this->servers = $serverTable->findIn($this->types, 'type')->fetchAll();
+        $servers = $serverTable->findIn($this->types, 'type')->fetchAll();
+        $this->servers = collect($servers)->filter(function (Server $server) {
+            return $server->isHidden() == false;
+        })->toArray();
         $this->table = $table;
+        $this->flash = $service->getFlash();
         $this->changeEggs($this->service->getConfig());
     }
 
@@ -68,7 +88,13 @@ class PterodactylConfigAction extends ConfigAction
     private function callApi(): array
     {
         $nests = collect($this->servers)->map(function (Server $server) {
-            $data = Http::callApi($server, 'nests')->data()->data;
+            $response = Http::callApi($server, 'nests')->data();
+            if (property_exists($response, 'data')) {
+                $data = $response->data;
+            } else {
+                $this->service->getFlash()->error($server->getName() . ' : Nests or locations cannot be reached (check your application key permission)');
+                $data = [];
+            }
             return collect($data)->mapWithKeys(function ($data, $id) use ($server) {
                 $attr = $data->attributes;
                 $nestId = $attr->id;
@@ -87,7 +113,13 @@ class PterodactylConfigAction extends ConfigAction
             })->toArray();
         })->toArray();
         $locations = collect($this->servers)->mapWithKeys(function (Server $server) {
-            $data = Http::callApi($server, 'locations')->data()->data;
+            $response = Http::callApi($server, 'locations')->data();
+            if (property_exists($response, 'data')) {
+                $data = $response->data;
+            } else {
+                $this->service->getFlash()->error($server->getName() . ' : Nests or locations cannot be reached (check your application key permission)');
+                $data = [];
+            }
             return collect($data)->mapWithKeys(function ($data) use ($server) {
                 $attr = $data->attributes;
                 return [$attr->id => $attr->short];
@@ -100,5 +132,4 @@ class PterodactylConfigAction extends ConfigAction
         })->toArray();
         return compact('locations', 'eggs');
     }
-
 }
