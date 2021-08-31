@@ -19,7 +19,7 @@ class PterodactylConfigAction extends ConfigAction
     protected array $fillable = [
         "memory", "disk", "io",
         "port_range", "swap", "cpu",
-        "servername", "egg_id", "nest_id",
+        "servername", "eggs",
         "location_id", "db", "backups",
         "image", "startup"
     ];
@@ -54,7 +54,6 @@ class PterodactylConfigAction extends ConfigAction
         })->toArray();
         $this->table = $table;
         $this->flash = $service->getFlash();
-        $this->changeEggs($this->service->getConfig());
     }
 
     public function validate(array $data): Validator
