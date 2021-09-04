@@ -15,7 +15,6 @@ use ClientX\Validator;
 
 class PterodactylConfigAction extends ConfigAction
 {
-    protected array $nullable = ["port_range", "servername", "image", "startup", "db", "backups"];
     protected array $fillable = [
         "memory", "disk", "io",
         "port_range", "swap", "cpu",
