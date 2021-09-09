@@ -70,6 +70,10 @@ class PterodactylConfigAction extends ConfigAction
             $validator->min(0, "backups");
         }
 
+        if (isset($data['eggs'][0]) == false){
+            $validator->notEmpty('eggs[]');
+        }
+
         if (!empty($data['servername'])) {
             $validator->length("servername", 1, 191);
         }
