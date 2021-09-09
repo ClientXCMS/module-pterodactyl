@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace App\Pterodactyl;
 
@@ -197,6 +197,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error("satisfying");
             }
             if ($server->status() !== 201) {
+                $this->logger->critical($server->toJson());
                 $this->error("createserver", $server->status());
             }
             $this->servers->saveServer($serverData, $item);
