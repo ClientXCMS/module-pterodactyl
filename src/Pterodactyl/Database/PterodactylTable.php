@@ -15,6 +15,8 @@ class PterodactylTable extends AbstractConfigurationTable
     {
 
         $data['eggs'] = json_encode($data['eggs']);
+        $data['egg_id'] = 0;
+        $data['nest_id'] = 0;
         $data = array_merge($data, ['product_id' => $productId]);
         
         foreach (["port_range", "servername", "image", "startup", "db", "backups"] as $key) {
@@ -35,6 +37,8 @@ class PterodactylTable extends AbstractConfigurationTable
                 $data[$key] = null;
             }
         }
+        $data['egg_id'] = 0;
+        $data['nest_id'] = 0;
         return $this->update($id, $data);
     }
 
