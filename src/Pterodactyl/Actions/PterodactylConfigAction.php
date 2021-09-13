@@ -58,11 +58,11 @@ class PterodactylConfigAction extends ConfigAction
     public function validate(array $data): Validator
     {
         $validator = (new Validator($data))
-            ->numeric('memory', 'disk', 'io', 'swap', 'cpu')
+            ->numeric('memory', 'disk', 'io', 'cpu')
             ->between('io', 9, 9999)
             ->min(-1, "swap")
             ->min(0, "disk", "cpu", "memory")
-            ->notEmpty('memory', 'disk', 'io', 'swap', 'cpu', 'location_id');
+            ->notEmpty('memory', 'disk', 'io', 'cpu', 'location_id');
         if (!empty($data['db'])) {
             $validator->min(0, "db");
         }
