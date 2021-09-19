@@ -99,7 +99,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             $server = $this->serverTable->findFirst(['pterodactyl']);
 
 
-            $response = Http::callApi($server, "nests/$nest/eggs/$egg")->data();
+            $response = Http::callApi($server, "nests/$nest/eggs/$egg");
             if ($response->status() == 200) {
                 $response = $response->data();
                 if ($response->attributes->name === $eggname) {
