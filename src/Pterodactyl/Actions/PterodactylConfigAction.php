@@ -15,11 +15,10 @@ use ClientX\Validator;
 
 class PterodactylConfigAction extends ConfigAction
 {
-    protected array $nullable = ["port_range", "servername", "image", "startup", "db", "backups"];
     protected array $fillable = [
         "memory", "disk", "io",
         "port_range", "swap", "cpu",
-        "servername", "egg_id", "nest_id",
+        "servername", "eggs",
         "location_id", "db", "backups",
         "image", "startup"
     ];
@@ -54,22 +53,25 @@ class PterodactylConfigAction extends ConfigAction
         })->toArray();
         $this->table = $table;
         $this->flash = $service->getFlash();
-        $this->changeEggs($this->service->getConfig());
     }
 
     public function validate(array $data): Validator
     {
         $validator = (new Validator($data))
-            ->numeric('memory', 'disk', 'io', 'swap', 'cpu')
+            ->numeric('memory', 'disk', 'io', 'cpu')
             ->between('io', 9, 9999)
             ->min(-1, "swap")
             ->min(0, "disk", "cpu", "memory")
-            ->notEmpty('memory', 'disk', 'io', 'swap', 'cpu', 'location_id');
+            ->notEmpty('memory', 'disk', 'io', 'cpu', 'location_id');
         if (!empty($data['db'])) {
             $validator->min(0, "db");
         }
         if (!empty($data['backups'])) {
             $validator->min(0, "backups");
+        }
+
+        if (isset($data['eggs'][0]) == false){
+            $validator->notEmpty('eggs[]');
         }
 
         if (!empty($data['servername'])) {

@@ -1,4 +1,4 @@
-<?php
+<?php 
 
 namespace App\Pterodactyl;
 
@@ -9,7 +9,6 @@ use App\Pterodactyl\Database\PterodactylTable;
 use App\Pterodactyl\Database\ServersTable;
 use App\Shop\Entity\OrderItem;
 use App\Shop\Entity\Product;
-use App\Wisp\Http;
 use ClientX\Helpers\Str;
 use ClientX\Response\ConnectionResponse;
 use ClientX\ServerTypeInterface;
@@ -198,6 +197,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error("satisfying");
             }
             if ($server->status() !== 201) {
+                $this->logger->critical($server->toJson());
                 $this->error("createserver", $server->status());
             }
             $this->servers->saveServer($serverData, $item);
@@ -247,7 +247,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error("retrieveuser", $userResult->status());
             }
             $updateResult = Http::callApi($service->server, 'users/' . $userId, [
-                //'username' => $userResult->data()->attributes->username,
+                'username' => $userResult->data()->attributes->username,
                 'email' => $userResult->data()->attributes->email,
                 'first_name' => $userResult->data()->attributes->first_name,
                 'last_name' => $userResult->data()->attributes->last_name,

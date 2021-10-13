@@ -66,11 +66,16 @@
                                 {{ field('servername', item.servername, trans('pterodactyl.form.core.servername') ~ ' (' ~ trans("optional") ~ ")") }}
                             </div>
                             <div class="col-md-4 col-sm-12">
-                                {{ field('eggs[]',item.eggs | json_decode(true),trans('Wisp.form.core.egg'), {options:eggs, arrayFirst:true},{'multiple':true}) }}
+							{% if item.eggs is not defined %}
+							{% set lastEggs = "" %}
+							{% else %}
+							{% set lastEggs = item.eggs %}
+							{% endif %}
+{{ field('eggs[]',lastEggs | json_decode(true),trans('pterodactyl.form.core.egg'), {options:eggs, arrayFirst:true},{'multiple':true}) }}
                             </div>
 
                             <div class="col-md-4 col-sm-12">
-                                {{ field('location_id', item.locationId ?? 1,trans('Wisp.form.core.location'),  {options:locations}) }}
+                                {{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {options:locations}) }}
                             </div>
                         </div>
                     </div>
