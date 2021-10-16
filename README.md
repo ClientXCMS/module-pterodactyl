@@ -20,12 +20,12 @@ CLIENTXCMS, Customer manager, easy billing made for everyone.
 
 
 ### French
-Toute l'équipe de CLIENTXCMS vous remercie pour cette achat. Nous espérons que celui la vous plaisent.
+Toute l'équipe de CLIENTXCMS vous remercie pour cet achat. Nous espérons que celui-là vous plaît.
 
 Pour installer ce module veuillez vous référez à la documentation.
 
 # Support & Documentation #
-Pour toutes questions par rapport à ce module, vous devez vous adressez au support du service de CLIENTXCMS :
+Pour toutes questions par rapport à ce module, vous devez vous adresser au support du service de CLIENTXCMS :
 - https://clientxcms.com/client/support Support technique
 - https://clientxcms.com/docs/fr/pterodactyl documentation Officiel
 - https://clientxcms.com/discord Discord communautaire

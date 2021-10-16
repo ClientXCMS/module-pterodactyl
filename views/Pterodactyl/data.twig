@@ -3,7 +3,11 @@
         <div class="card-body">
             <div class="row">
                 <div class="col-12">
-                    {{ field("eggname", item.eggname, "Egg pterodactyl", {options: eggs}) }}
+                    {% if eggs | length > 1 %}
+                        {{ field("eggname", item.eggname, "Egg pterodactyl", {options: eggs}) }}
+                    {% else %}
+                        <p>Selected : {{ eggs |first }}</p>
+                    {% endif %}
                 </div>
                 {% if inFiveM %}
 
