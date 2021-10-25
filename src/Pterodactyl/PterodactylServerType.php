@@ -3,6 +3,7 @@
 namespace App\Pterodactyl;
 
 use App\Account\User;
+use App\Pterodactyl\Actions\PterodactylConfigAction;
 use App\Admin\Database\ServerTable;
 use App\Admin\Entity\Server;
 use App\Pterodactyl\Database\PterodactylTable;
@@ -140,9 +141,15 @@ class PterodactylServerType implements ServerTypeInterface
                 $result = $this->makeAccount($user, $item->getServer())->data()->attributes;
             }
             $userId = $result->id;
-
-            $nestId = $params['nestId'];
-            $eggId = $params['eggId'];
+            
+            $eggs = json_decode($config->eggs, true);
+            if (count($eggs) == 1){
+                $first = current($eggs);
+                [$eggId, $nestId] = explode(PterodactylConfigAction::DELIMITER, $first);
+            } else {
+                $nestId = $params['nestId'];
+                $eggId = $params['eggId'];
+            }
             [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer(), $params);
             $name = $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId();
             $memory = $config->memory;
