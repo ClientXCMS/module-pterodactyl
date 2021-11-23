@@ -8,6 +8,7 @@ use App\Pterodactyl\Actions\PterodactylConfigAction;
 use App\Pterodactyl\Database\PterodactylTable;
 use ClientX\Renderer\RendererInterface;
 use ClientX\Validator;
+use function ClientX\request;
 
 class PterodactylData implements \ClientX\Product\ProductDataInterface
 {
@@ -66,7 +67,14 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
         $errors = $data['errors'];
         $item = $data['item'];
+        $params = request()->getParsedBody();
+        if (array_key_exists('eggname', $params)){
+            $item['eggname'] = $params['eggname'];
+        }
         $inAdmin = $data['inAdmin'] ?? false;
+        if (array_key_exists('FIVEM_LICENSE', $errors)){
+            $inFiveM = true;
+        }
         return $renderer->render("@pterodactyl/data", compact('inFiveM', 'eggs', 'productId', 'item', 'errors', 'inAdmin'));
     }
 
