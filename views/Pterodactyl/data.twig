@@ -12,7 +12,7 @@
                 {% if inFiveM %}
 
                     <div class="col-12">
-                        {{ field("FIVEM_LICENSE", item.FIVEM_LICENSE, "Clé FiveM") }}
+                        {{ field("FIVEM_LICENSE", item.FIVEM_LICENSE, "Clé FiveM", {help: 'https://keymaster.fivem.net/'}) }}
                     </div>
                 {% endif %}
                 <input type="hidden" value="{{ productId }}" name="productId">
