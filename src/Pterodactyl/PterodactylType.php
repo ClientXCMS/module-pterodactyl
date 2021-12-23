@@ -86,7 +86,7 @@ class PterodactylType implements ProductTypeInterface
                 $eggs[$response->attributes->name] = $response->attributes->name;
 
                 foreach ($response->attributes->relationships->variables->data as $key) {
-                    if ($key->attributes->env_variable === 'FIVEM_LICENSE' && is_null($key->attributes->default_value)) {
+                    if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value) || empty($key->attributes->default_value))) {
                         $inFiveM = true;
                     }
                 }
