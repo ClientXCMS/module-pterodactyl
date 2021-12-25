@@ -46,8 +46,10 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         $productId = $params['productId'];
         $config = $this->table->findConfig($productId);
         $eggsAndNest = json_decode($config->eggs, true);
-        if (count($eggsAndNest) == 1) {
-            $params['eggname'] = current($eggsAndNest);
+		
+        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
+        if (count($eggs) == 1) {
+            $params['eggname'] = current($eggs);
         }
         [$nestId, $eggId] = $this->getEggsIdFromName($params['eggname'], $eggsAndNest);
         $params['eggId'] = $eggId;
@@ -90,9 +92,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             if ($response->status() == 200) {
                 $response = $response->data();
                 $eggs[$response->attributes->name] = $response->attributes->name;
-
                 foreach ($response->attributes->relationships->variables->data as $key) {
-
                 if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value)|| empty($key->attributes->default_value))) {
                         $inFiveM = true;
                     }
@@ -128,7 +128,6 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         if ($response->status() == 200) {
             $response = $response->data();
             foreach ($response->attributes->relationships->variables->data as $key) {
-
                 if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value)|| empty($key->attributes->default_value))) {
                     $inFiveM = true;
                 }
