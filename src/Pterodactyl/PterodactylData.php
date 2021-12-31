@@ -6,6 +6,7 @@ namespace App\Pterodactyl;
 use App\Admin\Database\ServerTable;
 use App\Pterodactyl\Actions\PterodactylConfigAction;
 use App\Pterodactyl\Database\PterodactylTable;
+use ClientX\Database\NoRecordException;
 use ClientX\Renderer\RendererInterface;
 use ClientX\Validator;
 use function ClientX\request;
@@ -38,15 +39,19 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             $validator->notEmpty('FIVEM_LICENSE');
         }
         $validator->notEmpty('eggname');
+
         return $validator;
     }
 
     public function params(array $params): array
     {
+        if (!array_key_exists('productId', $params)) {
+            return [];
+        }
         $productId = $params['productId'];
         $config = $this->table->findConfig($productId);
         $eggsAndNest = json_decode($config->eggs, true);
-		
+
         [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
         if (count($eggs) == 1) {
             $params['eggname'] = current($eggs);
@@ -63,17 +68,21 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
     public function render(RendererInterface $renderer, array $data = []): string
     {
         $productId = $data['product']->getId();
-        $config = $this->table->findConfig($productId);
+        try {
+            $config = $this->table->findConfig($productId);
+        } catch (NoRecordException $e) {
+            return 'Configuration not found';
+        }
         $eggsAndNest = json_decode($config->eggs, true);
         [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
         $errors = $data['errors'];
         $item = $data['item'];
         $params = request()->getParsedBody();
-        if (array_key_exists('eggname', $params)){
+        if (array_key_exists('eggname', $params)) {
             $item['eggname'] = $params['eggname'];
         }
         $inAdmin = $data['inAdmin'] ?? false;
-        if (array_key_exists('FIVEM_LICENSE', $errors)){
+        if (array_key_exists('FIVEM_LICENSE', $errors)) {
             $inFiveM = true;
         }
         return $renderer->render("@pterodactyl/data", compact('inFiveM', 'eggs', 'productId', 'item', 'errors', 'inAdmin'));
@@ -84,7 +93,6 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         $eggs = [];
         $inFiveM = false;
         foreach ($eggsAndNest as $value) {
-
             [$egg, $nest] = explode(PterodactylConfigAction::DELIMITER, $value);
 
             $server = $this->serverTable->findFirst(['pterodactyl']);
@@ -93,7 +101,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
                 $response = $response->data();
                 $eggs[$response->attributes->name] = $response->attributes->name;
                 foreach ($response->attributes->relationships->variables->data as $key) {
-                if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value)|| empty($key->attributes->default_value))) {
+                    if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value)|| empty($key->attributes->default_value))) {
                         $inFiveM = true;
                     }
                 }

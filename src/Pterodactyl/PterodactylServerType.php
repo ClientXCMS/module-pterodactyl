@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Pterodactyl;
 
@@ -10,6 +10,7 @@ use App\Pterodactyl\Database\PterodactylTable;
 use App\Pterodactyl\Database\ServersTable;
 use App\Shop\Entity\OrderItem;
 use App\Shop\Entity\Product;
+use ClientX\Helpers\Passwords;
 use ClientX\Helpers\Str;
 use ClientX\Response\ConnectionResponse;
 use ClientX\ServerTypeInterface;
@@ -28,20 +29,25 @@ class PterodactylServerType implements ServerTypeInterface
     private ServersTable $servers;
     private Translater $translater;
     private LoggerInterface $logger;
+    /**
+     * @var \App\Pterodactyl\PterodactylMailer
+     */
+    private PterodactylMailer $mailer;
 
     public function __construct(
         LoggerInterface $logger,
         PterodactylTable $pterodactyl,
         ServersTable $servers,
         ServerTable $server,
+        PterodactylMailer $mailer,
         Translater $translater
-    )
-    {
+    ) {
         $this->logger = $logger;
         $this->server = $server;
         $this->servers = $servers;
         $this->pterodactyl = $pterodactyl;
         $this->translater = $translater;
+        $this->mailer = $mailer;
     }
 
     public function findServer(OrderItem $item): ?Server
@@ -95,7 +101,7 @@ class PterodactylServerType implements ServerTypeInterface
                 ->setIpaddress($params['ipaddress'])
                 ->setCertificate($params['certificate'])
                 ->setSecure($params['secure'] ?? false);
-            $response = Http::callApi($server, 'servers', [], 'GET', true)->getResponse();
+            $response = Http::callApi($server, 'servers', [], 'POST')->getResponse();
             $response2 = Http::callApi($server, '', [], 'GET', true, 'client')->getResponse();
             $success = $response->getStatusCode() == 200 && $response2->getStatusCode() == 200;
             $response = new Response($success ? 200 : 500, [], $success ? 'Application & Client : Success' : "Applications : " . $response->getBody()->__toString() . PHP_EOL . " Client : " . $response2->getBody()->__toString());
@@ -120,14 +126,12 @@ class PterodactylServerType implements ServerTypeInterface
             return "failed";
         }
         try {
-
             $params = $item->getData();
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
             $userResult = Http::callApi($item->getServer(), 'users/external/' . $user->getId());
             $data = [];
             $userResult = Http::callApi($item->getServer(), 'users');
-
             $data = array_merge($userResult->data()->data, $data);
             $result = null;
             foreach ($userResult->data()->data as $key => $value) {
@@ -135,15 +139,17 @@ class PterodactylServerType implements ServerTypeInterface
                     $result = $value->attributes;
                     break;
                 }
-
             }
             if ($result === null) {
-                $result = $this->makeAccount($user, $item->getServer())->data()->attributes;
+                $password = Passwords::generate();
+                $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
+            } else {
+                $password = "Already set";
             }
             $userId = $result->id;
             
             $eggs = json_decode($config->eggs, true);
-            if (count($eggs) == 1){
+            if (count($eggs) == 1) {
                 $first = current($eggs);
                 [$eggId, $nestId] = explode(PterodactylConfigAction::DELIMITER, $first);
             } else {
@@ -159,14 +165,15 @@ class PterodactylServerType implements ServerTypeInterface
             $disk = $config->disk;
             $location_id = $config->locationId;
             $dedicated_ip = (bool)$config->dedicatedip;
-            $port_range = $config->portRange;
-            $port_range = isset($portRange) ? explode(',', $portRange) : [];
+            $port_range = isset($config->portRange) ? explode('-', $config->portRange) : [];
+            $port_range = collect($port_range)->map(function ($range) {
+                return (string) $range;
+            })->toArray();
             $image = $config->image ?? $eggResult->data()->attributes->docker_image;
             $startup = $config->startup ?? $eggResult->data()->attributes->startup;
             $databases = $config->db;
             $allocations = $config->allocations ?? 0;
             $backups = $config->backups;
-
 
             $oom_disabled = (bool)$config->oomKill;
 
@@ -207,6 +214,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->logger->critical($server->toJson());
                 $this->error("createserver", $server->status());
             }
+            $this->mailer->sendTo($item->getService()->getUser(), $item->getServer(), $item->getService(), $password);
             $this->servers->saveServer($serverData, $item);
         } catch (Exception $e) {
             return $e->getMessage();
@@ -216,7 +224,7 @@ class PterodactylServerType implements ServerTypeInterface
 
     public function expireAccount(Service $service): string
     {
-        return $this->suspendAccount($service);
+        return $this->terminateAccount($service);
     }
 
     public function suspendAccount(Service $service): string
@@ -234,14 +242,13 @@ class PterodactylServerType implements ServerTypeInterface
         return $this->changeAccountStatus("DELETE", "terminate", $service->getId(), $service->server);
     }
 
-
     public function changePassword(Service $service, ?string $password = null): string
     {
         if ($password === null) {
             return 'can';
         }
         try {
-            if ($password === '' || $password === null) {
+            if ($password === '') {
                 $this->error("pdwempty");
             }
             $serverData = $this->getServerId($service->getId(), $service->server, true);
@@ -274,7 +281,7 @@ class PterodactylServerType implements ServerTypeInterface
         return "failed";
     }
 
-    private function makeAccount(User $user, Server $server)
+    private function makeAccount(User $user, Server $server, string $password)
     {
         return Http::callApi($server, 'users', [
             "username" => Str::slugify($user->getName()) . $user->getId(),
@@ -282,6 +289,7 @@ class PterodactylServerType implements ServerTypeInterface
             "first_name" => $user->getFirstname(),
             "last_name" => $user->getLastname(),
             "external_id" => (string)"CLIENTXCMS-" . str_pad($user->getId(), 5),
+            "password" => $password,
         ], 'POST');
     }
 

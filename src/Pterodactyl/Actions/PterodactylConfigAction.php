@@ -20,7 +20,7 @@ class PterodactylConfigAction extends ConfigAction
         "port_range", "swap", "cpu",
         "servername", "eggs",
         "location_id", "db", "backups",
-        "image", "startup"
+        "image", "startup",
     ];
     protected string $viewPath = "@pterodactyl_admin/config";
     protected array $types = ["pterodactyl"];
@@ -57,6 +57,7 @@ class PterodactylConfigAction extends ConfigAction
 
     public function validate(array $data): Validator
     {
+
         $validator = (new Validator($data))
             ->between('io', 9, 9999)
             ->min(-1, "swap")

@@ -27,9 +27,9 @@
                 <div class="card">
                     <div class="card-header">
 						<span class="round">
-							<i class="fas fa-cube"></i>
+							<i class="fas fa-server"></i>
 						</span>
-                        {{ trans('pterodactyl.form.resources.title') }}
+                        {{ trans('servers') }}
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -42,40 +42,31 @@
                             <div class="col-md-4 col-sm-12">
                                 {{ field('io',item.io ?? 10,  trans('pterodactyl.form.resources.io')) }}
                             </div>
+
                             <div class="col-md-6 col-sm-12">
                                 {{ field('swap', item.swap ?? -1, trans('pterodactyl.form.resources.swap')) }}
                             </div>
                             <div class="col-md-6 col-sm-12">
                                 {{ field('cpu', item.cpu ?? 100,trans('pterodactyl.form.resources.cpu'),  {type: 'number'}) }}
                             </div>
-                        </div>
-                    </div>
-                </div>
 
-                <div class="card">
-                    <div class="card-header">
-						<span class="round">
-							<i class="fas fa-info"></i>
-						</span>
-                        {{ trans('pterodactyl.form.core.title') }}</div>
-
-                    <div class="card-body">
-                        <div class="row">
-
-                            <div class="col-md-4 col-sm-12">
-                                {{ field('servername', item.servername, trans('pterodactyl.form.core.servername') ~ ' (' ~ trans("optional") ~ ")") }}
-                            </div>
-                            <div class="col-md-4 col-sm-12">
-							{% if item.eggs is not defined %}
-							{% set lastEggs = "" %}
-							{% else %}
-							{% set lastEggs = item.eggs %}
-							{% endif %}
-{{ field('eggs[]',lastEggs | json_decode(true),trans('pterodactyl.form.core.egg'), {options:eggs, arrayFirst:true},{'multiple':true}) }}
+                            <div class="col-md-6 col-sm-12">
+                                {% if item.eggs is not defined %}
+                                    {% set lastEggs = item.eggs is not defined ? '' : item.eggs %}
+                                {% else %}
+                                    {% set lastEggs = item.eggs %}
+                                {% endif %}
+                                {{ field('eggs[]',lastEggs | json_decode(true),trans('pterodactyl.form.core.egg'), {options:eggs, arrayFirst:true, class: 'select2'},{'multiple':true}) }}
                             </div>
 
-                            <div class="col-md-4 col-sm-12">
+                            <div class="col-md-6 col-sm-12">
                                 {{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {options:locations}) }}
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                {{ field('port_range',item.portRange,  trans('pterodactyl.form.resources.portrange') ~ ' (' ~ trans("optional") ~ ")") }}
+                            </div>
+                            <div class="col-md-6 col-sm-12">
+                                {{ field('servername', item.servername, trans('pterodactyl.form.core.servername') ~ ' (' ~ trans("optional") ~ ")") }}
                             </div>
                         </div>
                     </div>
@@ -165,6 +156,9 @@
                 } else {
                     $('#conv_mb').val();
                 }
-            })
+            }),
+
+                $(".select2").select2({multiple:true})
+
         </script>
     {% endblock %}

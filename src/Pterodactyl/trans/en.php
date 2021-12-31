@@ -59,7 +59,7 @@ return [
                 "disk"      => "Disk space (MB)",
                 "swap"      => "Swap",
                 "io"        => "Block IO",
-                "portrange" => "Port to assign to the server (separated by commas)",
+                "portrange" => "Port to assign to the server (Example: 3000-4000)",
                 "cpu"       => "CPU limit (%)",
             ],
             "features" => [

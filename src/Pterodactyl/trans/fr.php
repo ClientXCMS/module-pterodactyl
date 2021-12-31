@@ -58,7 +58,7 @@ return [
                 "disk"      => "Espace disque (MB)",
                 "swap"      => "Swap",
                 "io"        => "Block IO",
-                "portrange" => "Port à attribuer au serveur (séparé par des virgules)",
+                "portrange" => "Port à attribuer au serveur (Exemple: 3000-4000)",
                 "cpu"       => "Limite de CPU (%)",
             ],
             "features" => [

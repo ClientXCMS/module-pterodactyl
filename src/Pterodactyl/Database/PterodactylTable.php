@@ -21,10 +21,10 @@ class PterodactylTable extends AbstractConfigurationTable
         
         foreach (["port_range", "servername", "image", "startup", "db", "backups"] as $key) {
             if (empty($data[$key])) {
-                if (in_array($key, ["db", "backups"])){
+                if (in_array($key, ["db", "backups"])) {
                     $data[$key] = 0;
                 } else {
-                   $data[$key] = null;
+                    $data[$key] = null;
                 }
             }
         }
@@ -38,10 +38,10 @@ class PterodactylTable extends AbstractConfigurationTable
         
         foreach (["port_range", "servername", "image", "startup", "db", "backups"] as $key) {
             if (empty($data[$key])) {
-                if (in_array($key, ["db", "backups"])){
+                if (in_array($key, ["db", "backups"])) {
                     $data[$key] = 0;
                 } else {
-                   $data[$key] = null;
+                    $data[$key] = null;
                 }
             }
         }
