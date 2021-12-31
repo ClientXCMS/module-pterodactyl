@@ -19,6 +19,7 @@ use ClientX\Validator;
 use Exception;
 use App\Shop\Entity\Service;
 use GuzzleHttp\Psr7\Response;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
@@ -33,13 +34,17 @@ class PterodactylServerType implements ServerTypeInterface
      * @var \App\Pterodactyl\PterodactylMailer
      */
     private PterodactylMailer $mailer;
+    /**
+     * @var \Psr\Container\ContainerInterface
+     */
+    private ContainerInterface $container;
 
     public function __construct(
         LoggerInterface $logger,
         PterodactylTable $pterodactyl,
         ServersTable $servers,
         ServerTable $server,
-        PterodactylMailer $mailer,
+        ContainerInterface $container,
         Translater $translater
     ) {
         $this->logger = $logger;
@@ -47,7 +52,7 @@ class PterodactylServerType implements ServerTypeInterface
         $this->servers = $servers;
         $this->pterodactyl = $pterodactyl;
         $this->translater = $translater;
-        $this->mailer = $mailer;
+        $this->container = $container;
     }
 
     public function findServer(OrderItem $item): ?Server
@@ -147,7 +152,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $password = "Already set";
             }
             $userId = $result->id;
-            
+
             $eggs = json_decode($config->eggs, true);
             if (count($eggs) == 1) {
                 $first = current($eggs);
@@ -214,7 +219,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->logger->critical($server->toJson());
                 $this->error("createserver", $server->status());
             }
-            $this->mailer->sendTo($item->getService()->getUser(), $item->getServer(), $item->getService(), $password);
+            $this->container->get(PterodactylMailer::class)->sendTo($item->getService()->getUser(), $item->getServer(), $item->getService(), $password);
             $this->servers->saveServer($serverData, $item);
         } catch (Exception $e) {
             return $e->getMessage();
