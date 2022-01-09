@@ -152,7 +152,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $password = "Already set";
             }
             $userId = $result->id;
-
+            
             $eggs = json_decode($config->eggs, true);
             if (count($eggs) == 1) {
                 $first = current($eggs);
@@ -219,7 +219,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->logger->critical($server->toJson());
                 $this->error("createserver", $server->status());
             }
-            $this->container->get(PterodactylMailer::class)->sendTo($item->getService()->getUser(), $item->getServer(), $item->getService(), $password);
+            $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
             $this->servers->saveServer($serverData, $item);
         } catch (Exception $e) {
             return $e->getMessage();
