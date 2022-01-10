@@ -146,7 +146,7 @@ class PterodactylServerType implements ServerTypeInterface
                 }
             }
             if ($result === null) {
-                $password = Str::randomStr();
+                $password = Str::randomStr(10);
                 $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
             } else {
                 $password = "Already set";
