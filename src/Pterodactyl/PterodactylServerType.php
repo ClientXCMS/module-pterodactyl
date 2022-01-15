@@ -107,6 +107,11 @@ class PterodactylServerType implements ServerTypeInterface
                 ->setCertificate($params['certificate'])
                 ->setSecure($params['secure'] ?? false);
             $response = Http::callApi($server, 'servers', [], 'POST')->getResponse();
+			$body = json_decode($response->getBody()->__toString(), true);
+
+			if ($body != null && $body['errors'][0]['code'] == "ValidationException"){
+                $response = $response->withStatus(200);
+			}
             $response2 = Http::callApi($server, '', [], 'GET', true, 'client')->getResponse();
             $success = $response->getStatusCode() == 200 && $response2->getStatusCode() == 200;
             $response = new Response($success ? 200 : 500, [], $success ? 'Application & Client : Success' : "Applications : " . $response->getBody()->__toString() . PHP_EOL . " Client : " . $response2->getBody()->__toString());
@@ -116,7 +121,6 @@ class PterodactylServerType implements ServerTypeInterface
         }
         return new ConnectionResponse($response);
     }
-
     public function validate(array $params): Validator
     {
         return (new Validator($params))
