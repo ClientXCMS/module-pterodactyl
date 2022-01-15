@@ -144,13 +144,13 @@ class PterodactylServerType implements ServerTypeInterface
             $data = array_merge($userResult->data()->data, $data);
             $result = null;
             foreach ($userResult->data()->data as $key => $value) {
-                if ($value->attributes->email == $user->getEmail()) {
+                if ($value->attributes->email == strtolower($user->getEmail())) {
                     $result = $value->attributes;
                     break;
                 }
             }
             if ($result === null) {
-                $password = Passwords::generate();
+                $password = Str::randomStr(10);
                 $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
             } else {
                 $password = "Already set";
