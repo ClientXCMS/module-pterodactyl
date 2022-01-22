@@ -16,7 +16,8 @@ return [
         get(PterodactylType::class),
     ]),
      'permissions.list' => add([
-        "pterodactyl.admin" => "Pterodactyl configuration",
+        "pterodactyl.admin" => "Pterodactyl index",
+        "pterodactyl.admin.config" => "Pterodactyl config",
     ]),
     'twig.extensions' => add(get(PterodactylTwigExtension::class)),
     'panel.list' => add([PterodactylPanel::class => ['pterodactyl']]),
