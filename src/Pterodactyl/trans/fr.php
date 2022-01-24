@@ -41,8 +41,7 @@ return [
         ],
         "adminindex" => [
             "title" => "Configuration Pterodactyl",
-            "subtitle" => "Administez les différentes configurations d'offre.",
-            
+            "subtitle" => "Administrez les configurations de vos offres.",
             "memory"    => "Mémoire",
             "disk"      => "Espace disque",
             "productname"=> "Nom produit",
