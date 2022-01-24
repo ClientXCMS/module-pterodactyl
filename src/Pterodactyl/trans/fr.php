@@ -49,7 +49,7 @@ return [
         ],
         "config" => [
             "title" => "Configuration du serveur",
-            "subtitle" => "Administez les différentes caractèristiques de l'offre.",
+            "subtitle" => "Administrez les différentes caractéristiques de l'offre.",
         ],
         "form" => [
             "resources" => [
