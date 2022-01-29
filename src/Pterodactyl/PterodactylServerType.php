@@ -144,7 +144,8 @@ class PterodactylServerType implements ServerTypeInterface
             $data = array_merge($userResult->data()->data, $data);
             $result = null;
             foreach ($userResult->data()->data as $key => $value) {
-                if ($value->attributes->email == strtolower($user->getEmail())) {
+
+                if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
                     $result = $value->attributes;
                     break;
                 }
