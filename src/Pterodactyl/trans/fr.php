@@ -78,11 +78,6 @@ return [
                 "startup" => "Commande de lancement",
                 "oomkiller" => "Désactiver OOM Killer",
                 "dedicatedip" => "Addresse IP dédiée",
-            ],
-            "converter" => [
-                "title" => "Convertisseur",
-                "mb" => "Tapez votre chiffre en MB",
-                "gb" => "Tapez votre chiffre en GB"
             ]
         ]
     ]

@@ -80,11 +80,6 @@ return [
                 "startup" => "Startup command ",
                 "oomkiller" => "Disabled OOM Killer",
                 "dedicatedip" => "Addresse IP dedicatedip",
-            ],
-            "converter" => [
-                "title" => "Converter",
-                "mb" => "Enter your number in MB",
-                "gb" => "Enter your number in GB"
             ]
         ]
     ]

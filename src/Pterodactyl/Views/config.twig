@@ -96,15 +96,15 @@
 						<span class="round">
 							<i class="fas fa-redo-alt"></i>
 						</span>
-                        {{ trans('pterodactyl.form.converter.title') }}
+                        {{ trans('converter.title') }}
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <div class="col-12">
-                                {{ field('conv_gb', null, trans('pterodactyl.form.converter.gb'), {placeholder: true, label: false, type: 'number'}) }}
+                                {{ field('conv_gb', null, trans('converter.gb'), {placeholder: true, label: false, type: 'number'}) }}
                             </div>
                             <div class="col-12">
-                                {{ field('conv_mb', null, trans('pterodactyl.form.converter.mb'), {placeholder: true, label: false, type: 'number'}) }}
+                                {{ field('conv_mb', null, trans('converter.mb'), {placeholder: true, label: false, type: 'number'}) }}
                             </div>
                         </div>
                     </div>
@@ -144,7 +144,7 @@
             $('#conv_mb').change(function () {
                 let value = $(this).val();
                 if (value != "") {
-                    $('#conv_gb').val(value * 1024);
+                    $('#conv_gb').val(value / 1024);
                 } else {
                     $('#conv_gb').val();
                 }
