@@ -8,7 +8,6 @@ use App\Shop\Panel\PanelInterface;
 use ClientX\Renderer\RendererInterface;
 use App\Auth\Database\UserTable;
 
-
 class PterodactylPanel implements PanelInterface
 {
     const STATS = [
@@ -20,12 +19,12 @@ class PterodactylPanel implements PanelInterface
     ];
 
      
-	private UserTable $table;
-	
-	public function __construct(UserTable $table)
-	{
-		$this->table = $table;
-	}
+    private UserTable $table;
+    
+    public function __construct(UserTable $table)
+    {
+        $this->table = $table;
+    }
 
     public function render(RendererInterface $renderer, Service $service): string
     {
@@ -50,10 +49,10 @@ class PterodactylPanel implements PanelInterface
         }
         
         
-		if (property_exists($utilizationResult->data(), 'errors')){
+        if (property_exists($utilizationResult->data(), 'errors')) {
             $data['errors'] = $utilizationResult->data()->errors[0]->detail;
             return $renderer->render("@pterodactyl/panel", compact('data'));
-		}
+        }
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
@@ -68,9 +67,16 @@ class PterodactylPanel implements PanelInterface
             })->join(',');
         }
         
-		$data['user'] = $this->table->find($service->getUserId());
+        $data['user'] = $this->table->find($service->getUserId());
         $data['inAdmin'] = false;
         $data['stats'] = self::STATS;
+        if ($attributes->limits->io == 500) {
+            unset($data['stats']['io']);
+        }
+
+        if ($attributes->limits->swap == -1) {
+            unset($data['stats']['swap']);
+        }
         return $renderer->render("@pterodactyl/panel", $data);
     }
 
@@ -91,7 +97,7 @@ class PterodactylPanel implements PanelInterface
             return $renderer->render("@pterodactyl/panel", compact('data'));
         }
         
-		$data['user'] = $this->table->find($service->getUserId());
+        $data['user'] = $this->table->find($service->getUserId());
         $schema = $service->server->isSecure() ? 'https://' : 'http://';
         $ip = $service->server->getIpaddress();
         $data['href'] =  sprintf('%s%s/server/%s', $schema, $ip, $attributes->identifier);
@@ -102,21 +108,30 @@ class PterodactylPanel implements PanelInterface
         }
         
         
-		if (property_exists($utilizationResult->data(), 'errors')){
+        if (property_exists($utilizationResult->data(), 'errors')) {
             $data['errors'] = $utilizationResult->data()->errors[0]->detail;
             return $renderer->render("@pterodactyl/panel", compact('data'));
-		}
+        }
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
 
         if (property_exists($attributes->relationships->allocations, 'data')) {
             $data['ips'] = collect($attributes->relationships->allocations->data)->map(function ($data) {
-                return $data->attributes->alias ? $data->attributes->alias : $data->attributes->ip  . ":" . $data->attributes->port;
+                return $data->attributes->alias ?: $data->attributes->ip  . ":" . $data->attributes->port;
             })->join(',');
         }
+
         $data['inAdmin'] = true;
         $data['stats'] = self::STATS;
+
+        if ($attributes->limits->io == 500) {
+            unset($data['stats']['io']);
+        }
+
+        if ($attributes->limits->swap == -1) {
+            unset($data['stats']['swap']);
+        }
         return $renderer->render("@pterodactyl/panel", $data);
     }
 }
