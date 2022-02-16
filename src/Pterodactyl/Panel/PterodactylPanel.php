@@ -38,27 +38,29 @@ class PterodactylPanel implements PanelInterface
         $utilizationResult = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
         if (!$attributes->container->installed) {
             $data['errors'] = "Server not installed";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         $schema = $service->server->isSecure() ? 'https://' : 'http://';
         $ip = $service->server->getIpaddress();
         $data['href'] =  sprintf('%s%s/server/%s', $schema, $ip, $attributes->identifier);
         if ($attributes->suspended) {
             $data['errors'] = "Server suspended";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         
         
         if (property_exists($utilizationResult->data(), 'errors')) {
             $data['errors'] = $utilizationResult->data()->errors[0]->detail;
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
         $data['service'] = $service;
         if ($attributes->suspended) {
             $data['errors'] = "Server suspended";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         
         if (property_exists($attributes->relationships->allocations, 'data')) {
@@ -87,14 +89,14 @@ class PterodactylPanel implements PanelInterface
         $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
         if (!$serverResult->successful()) {
             $data['errors'] = "Server not found";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         $attributes = $serverResult->data()->attributes;
 
         $utilizationResult = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
         if (!$attributes->container->installed) {
             $data['errors'] = "Server not installed";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         
         $data['user'] = $this->table->find($service->getUserId());
@@ -104,13 +106,14 @@ class PterodactylPanel implements PanelInterface
 
         if ($attributes->suspended) {
             $data['errors'] = "Server suspended";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         
         
         if (property_exists($utilizationResult->data(), 'errors')) {
             $data['errors'] = $utilizationResult->data()->errors[0]->detail;
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         $data['utilization'] = $utilizationResult->data()->attributes;
         $data['attributes'] = $attributes;
