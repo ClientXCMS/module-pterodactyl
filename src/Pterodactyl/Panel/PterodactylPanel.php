@@ -32,7 +32,7 @@ class PterodactylPanel implements PanelInterface
         $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
         if (!$serverResult->successful()) {
             $data['errors'] = "Server not found";
-            return $renderer->render("@pterodactyl/panel", compact('data'));
+            return $renderer->render("@pterodactyl/panel", $data);
         }
         $attributes = $serverResult->data()->attributes;
         $utilizationResult = Http::callApi($service->server, 'servers/' . $attributes->identifier . "/resources", [], 'GET', true, 'client');
