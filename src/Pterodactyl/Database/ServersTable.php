@@ -1,8 +1,6 @@
 <?php
 namespace App\Pterodactyl\Database;
 
-use App\Shop\Entity\OrderItem;
-
 class ServersTable extends \ClientX\Database\Table
 {
 
@@ -23,17 +21,14 @@ class ServersTable extends \ClientX\Database\Table
         }
     }
 
-    public function saveServer(array $serverData, OrderItem $item)
+    public function saveServer(int $serviceId, int $serverId, int $productId)
     {
-        $limit = $serverData['limits'];
-        $feature =  $serverData['feature_limits'];
-        $deploy = $serverData['deploy'];
         return $this->makeQuery()
         ->setCommand("INSERT")
         ->params([
-            'service_id' => $serverData['external_id'],
-            'server_id' => $item->getServer()->getId(),
-            'product_id' => $item->getItem()->getOrderable()->getId()
+            'service_id' => $serviceId,
+            'server_id' => $serverId,
+            'product_id' => $productId
         ])->execute();
     }
 }

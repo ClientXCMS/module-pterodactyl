@@ -35,9 +35,6 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
     public function validate(array $data): Validator
     {
         $validator = new Validator($data);
-        if ($this->checkIfFiveMEgg($data)) {
-            $validator->notEmpty('FIVEM_LICENSE');
-        }
         $validator->notEmpty('eggname');
 
         return $validator;
@@ -52,11 +49,11 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         $config = $this->table->findConfig($productId);
         $eggsAndNest = json_decode($config->eggs, true);
 
-        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
+        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest, $config->serverId);
         if (count($eggs) == 1) {
             $params['eggname'] = current($eggs);
         }
-        [$nestId, $eggId] = $this->getEggsIdFromName($params['eggname'], $eggsAndNest);
+        [$nestId, $eggId] = $this->getEggsIdFromName($params['eggname'], $eggsAndNest, $config->serverId);
         $params['eggId'] = $eggId;
         $params['nestId'] = $nestId;
 
@@ -74,7 +71,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             return 'Configuration not found';
         }
         $eggsAndNest = json_decode($config->eggs, true);
-        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
+        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest, $config->serverId);
         $errors = $data['errors'];
         $item = $data['item'];
         $params = request()->getParsedBody();
@@ -82,39 +79,39 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             $item['eggname'] = $params['eggname'];
         }
         $inAdmin = $data['inAdmin'] ?? false;
-        if (array_key_exists('FIVEM_LICENSE', $errors)) {
-            $inFiveM = true;
-        }
-        return $renderer->render("@pterodactyl/data", compact('inFiveM', 'eggs', 'productId', 'item', 'errors', 'inAdmin'));
+        return $renderer->render("@pterodactyl/data", compact('eggs', 'productId', 'item', 'errors', 'inAdmin'));
     }
 
-    private function getEggsAndFiveM(array $eggsAndNest): array
+    private function getEggsAndFiveM(array $eggsAndNest, ?int $serverId = null): array
     {
         $eggs = [];
         $inFiveM = false;
         foreach ($eggsAndNest as $value) {
             [$egg, $nest] = explode(PterodactylConfigAction::DELIMITER, $value);
 
-            $server = $this->serverTable->findFirst(['pterodactyl']);
+            if ($serverId){
+                $server = $this->serverTable->find($serverId);
+            } else {
+                $server = $this->serverTable->findFirst(['pterodactyl']);
+            }
             $response = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
             if ($response->status() == 200) {
                 $response = $response->data();
                 $eggs[$response->attributes->name] = $response->attributes->name;
-                foreach ($response->attributes->relationships->variables->data as $key) {
-                    if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value)|| empty($key->attributes->default_value))) {
-                        $inFiveM = true;
-                    }
-                }
             }
         }
         return [$inFiveM, $eggs];
     }
 
-    private function getEggsIdFromName(string $eggname, $eggs)
+    private function getEggsIdFromName(string $eggname, $eggs, ?int $serverId = null)
     {
         foreach ($eggs as $value) {
             [$egg, $nest] = explode(PterodactylConfigAction::DELIMITER, $value);
-            $server = $this->serverTable->findFirst(['pterodactyl']);
+            if ($serverId){
+                $server = $this->serverTable->find($serverId);
+            } else {
+                $server = $this->serverTable->findFirst(['pterodactyl']);
+            }
 
             $response = Http::callApi($server, "nests/$nest/eggs/$egg");
             if ($response->status() == 200) {
@@ -126,11 +123,15 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         }
     }
 
-    private function checkIfFiveMEgg(array $data)
+    private function checkIfFiveMEgg(array $data, ?int $serverId = null)
     {
         $nest = $data['nestId'] ?? 0;
         $egg = $data['eggId'] ?? 0;
-        $server = $this->serverTable->findFirst(['pterodactyl']);
+        if ($serverId){
+            $server = $this->serverTable->find($serverId);
+        } else {
+            $server = $this->serverTable->findFirst(['pterodactyl']);
+        }
         $inFiveM = false;
         $response = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
         if ($response->status() == 200) {

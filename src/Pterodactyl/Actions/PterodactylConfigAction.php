@@ -20,7 +20,7 @@ class PterodactylConfigAction extends ConfigAction
         "port_range", "swap", "cpu",
         "servername", "eggs",
         "location_id", "db", "backups",
-        "image", "startup",
+        "image", "startup",  "server_id"
     ];
     protected string $viewPath = "@pterodactyl_admin/config";
     protected array $types = ["pterodactyl"];
@@ -84,6 +84,10 @@ class PterodactylConfigAction extends ConfigAction
     {
         $params = array_merge($params, $this->callApi());
         $params['DELIMITER'] = self::DELIMITER;
+        
+        $params['servers'] = collect($this->servers)->mapWithKeys(function(Server $server){
+            return [$server->getId() => $server->getName()];
+        })->toArray();
         return parent::formParams($params);
     }
 
@@ -124,7 +128,7 @@ class PterodactylConfigAction extends ConfigAction
             }
             return collect($data)->mapWithKeys(function ($data) use ($server) {
                 $attr = $data->attributes;
-                return [$attr->id => $attr->short];
+                return [$attr->id => $attr->short . " - ". $server->getName()];
             })->toArray();
         })->toArray();
         $eggs = collect($nests)->mapWithKeys(function (array $nest) {

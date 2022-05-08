@@ -50,7 +50,7 @@
                                 {{ field('cpu', item.cpu ?? 500,trans('pterodactyl.form.resources.cpu'),  {type: 'number'}) }}
                             </div>
 
-                            <div class="col-md-6 col-sm-12">
+                            <div class="col-md-4 col-sm-12">
                                 {% if item.eggs is not defined %}
                                     {% set lastEggs = item.eggs is not defined ? '' : item.eggs %}
                                 {% else %}
@@ -59,8 +59,12 @@
                                 {{ field('eggs[]',lastEggs | json_decode(true),trans('pterodactyl.form.core.egg'), {options:eggs, arrayFirst:true, class: 'select2'},{'multiple':true}) }}
                             </div>
 
-                            <div class="col-md-6 col-sm-12">
+                            <div class="col-md-4 col-sm-12">
                                 {{ field('location_id', item.locationId ?? 1,trans('pterodactyl.form.core.location'),  {options:locations}) }}
+                            </div>
+                            
+                            <div class="col-md-4 col-sm-12">
+                            {{ field('server_id',item.serverId,  trans('server'), {options: servers}) }}
                             </div>
                             <div class="col-md-6 col-sm-12">
                                 {{ field('port_range',item.portRange,  trans('pterodactyl.form.resources.portrange') ~ ' (' ~ trans("optional") ~ ")") }}

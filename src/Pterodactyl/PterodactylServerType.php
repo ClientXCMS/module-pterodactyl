@@ -60,7 +60,15 @@ class PterodactylServerType implements ServerTypeInterface
         if ($item->getService() != null) {
             return $this->server->find($item->getService()->server->getId());
         }
-        return $this->server->findFirst($this->for());
+        
+        $config = $this->pterodactyl->findConfig($item->getItem()->getOrderable()->getId());
+        $serverId = $config->serverId;
+        if ($serverId){
+            $server = $this->server->find($serverId);
+        } else {
+            $server = $this->server->findFirst($this->for());
+        }
+        return $server;
     }
 
     public function changeName(Service $service, ?string $name = null): ?string
@@ -186,7 +194,16 @@ class PterodactylServerType implements ServerTypeInterface
             $backups = $config->backups;
 
             $oom_disabled = (bool)$config->oomKill;
-
+			try {
+				$serviceId = (string)$item->getService()->getId();
+				$id = $this->getServerId($serviceId, $item->getServer(), false);
+				$serverData['external_id'] = $serviceId;
+            $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
+            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId);
+				return 'success';
+			} catch (\Exception $e) {
+				
+			}
             $serverData = [
                 'name' => $name,
                 'user' => (int)$userId,
@@ -225,7 +242,8 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error("createserver", $server->status());
             }
             $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
-            $this->servers->saveServer($serverData, $item);
+            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId);
+
         } catch (Exception $e) {
             return $e->getMessage();
         }

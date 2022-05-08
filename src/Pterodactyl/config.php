@@ -4,7 +4,7 @@ use App\Pterodactyl\Actions\PowerAction;
 use App\Pterodactyl\PterodactylType;
 use App\Pterodactyl\Panel\PterodactylPanel;
 use App\Pterodactyl\PterodactylTwigExtension;
-
+use App\Pterodactyl\PterodactylManualService;
 use function \DI\get;
 use function \DI\add;
 use function DI\autowire;
@@ -20,6 +20,6 @@ return [
     ]),
     'twig.extensions' => add(get(PterodactylTwigExtension::class)),
     'panel.list' => add([PterodactylPanel::class => ['pterodactyl']]),
-    PowerAction::class => autowire()->constructorParameter('certif', get('app.certificate'))
-
+    PowerAction::class => autowire()->constructorParameter('certif', get('app.certificate')),
+    'manualservice.list' => add(get(PterodactylManualService::class))
 ];

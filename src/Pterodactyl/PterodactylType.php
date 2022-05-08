@@ -50,7 +50,7 @@ class PterodactylType implements ProductTypeInterface
     public function getData(): ?string
     {
         $url = request()->getUri()->getPath();
-        if (str_starts_with($url, '/basket') || str_starts_with($url, '/shop')) {
+        if (str_starts_with($url, '/basket') || str_starts_with($url, '/store')) {
             $id = 0;
             $match = $this->router->match(request());
             if ($match->getParams()['id'] ?? null) {
@@ -58,7 +58,7 @@ class PterodactylType implements ProductTypeInterface
                     $config = $this->table->findConfig($match->getParams()['id']);
                     $eggsAndNest = json_decode($config->eggs, true);
 
-                    [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest);
+                    [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest, $config->serverId);
                     if ($inFiveM == false && count($eggsAndNest) == 1) {
                         return null;
                     }
@@ -71,25 +71,22 @@ class PterodactylType implements ProductTypeInterface
     }
 
 
-    private function getEggsAndFiveM(array $eggsAndNest): array
+    private function getEggsAndFiveM(array $eggsAndNest, ?int $serverId = null): array
     {
         $eggs = [];
         $inFiveM = false;
         foreach ($eggsAndNest as $value) {
-
             [$egg, $nest] = explode(PterodactylConfigAction::DELIMITER, $value);
-
+            
+        if ($serverId){
+            $server = $this->serverTable->find($serverId);
+        } else {
             $server = $this->serverTable->findFirst(['pterodactyl']);
+        }
             $response = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
             if ($response->status() == 200) {
                 $response = $response->data();
                 $eggs[$response->attributes->name] = $response->attributes->name;
-
-                foreach ($response->attributes->relationships->variables->data as $key) {
-                    if ($key->attributes->env_variable === 'FIVEM_LICENSE' && is_null($key->attributes->default_value)) {
-                        $inFiveM = true;
-                    }
-                }
             }
         }
         return [$inFiveM, $eggs];
