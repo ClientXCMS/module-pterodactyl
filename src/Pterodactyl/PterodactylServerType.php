@@ -194,16 +194,18 @@ class PterodactylServerType implements ServerTypeInterface
             $backups = $config->backups;
 
             $oom_disabled = (bool)$config->oomKill;
-			try {
-				$serviceId = (string)$item->getService()->getId();
-				$id = $this->getServerId($serviceId, $item->getServer(), false);
-				$serverData['external_id'] = $serviceId;
-            $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
-            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
-				return 'success';
-			} catch (\Exception $e) {
-				
-			}
+	    try {
+		$serviceId = (string)$item->getService()->getId();
+		$id = $this->getServerId($serviceId, $item->getServer(), false);
+
+		if ($id != null){
+		    $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
+		    $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
+		    return 'success';
+		}
+	    } catch (\Exception $e) {
+
+	    }
             $serverData = [
                 'name' => $name,
                 'user' => (int)$userId,
