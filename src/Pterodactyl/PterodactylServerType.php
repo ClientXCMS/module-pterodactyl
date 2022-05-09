@@ -199,7 +199,7 @@ class PterodactylServerType implements ServerTypeInterface
 				$id = $this->getServerId($serviceId, $item->getServer(), false);
 				$serverData['external_id'] = $serviceId;
             $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
-            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId);
+            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
 				return 'success';
 			} catch (\Exception $e) {
 				
@@ -242,7 +242,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $this->error("createserver", $server->status());
             }
             $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
-            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId);
+            $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
 
         } catch (Exception $e) {
             return $e->getMessage();
