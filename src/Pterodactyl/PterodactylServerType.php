@@ -8,6 +8,7 @@ use App\Admin\Database\ServerTable;
 use App\Admin\Entity\Server;
 use App\Pterodactyl\Database\PterodactylTable;
 use App\Pterodactyl\Database\ServersTable;
+use App\Shop\Entity\Order;
 use App\Shop\Entity\OrderItem;
 use App\Shop\Entity\Product;
 use ClientX\Helpers\Passwords;
@@ -63,7 +64,7 @@ class PterodactylServerType implements ServerTypeInterface
         
         $config = $this->pterodactyl->findConfig($item->getItem()->getOrderable()->getId());
         $serverId = $config->serverId;
-        if ($serverId){
+        if ($serverId) {
             $server = $this->server->find($serverId);
         } else {
             $server = $this->server->findFirst($this->for());
@@ -115,11 +116,11 @@ class PterodactylServerType implements ServerTypeInterface
                 ->setCertificate($params['certificate'])
                 ->setSecure($params['secure'] ?? false);
             $response = Http::callApi($server, 'servers', [], 'POST')->getResponse();
-			$body = json_decode($response->getBody()->__toString(), true);
+            $body = json_decode($response->getBody()->__toString(), true);
 
-			if ($body != null && $body['errors'][0]['code'] == "ValidationException"){
+            if ($body != null && $body['errors'][0]['code'] == "ValidationException") {
                 $response = $response->withStatus(200);
-			}
+            }
             $response2 = Http::callApi($server, '', [], 'GET', true, 'client')->getResponse();
             $success = $response->getStatusCode() == 200 && $response2->getStatusCode() == 200;
             $response = new Response($success ? 200 : 500, [], $success ? 'Application & Client : Success' : "Applications : " . $response->getBody()->__toString() . PHP_EOL . " Client : " . $response2->getBody()->__toString());
@@ -152,7 +153,6 @@ class PterodactylServerType implements ServerTypeInterface
             $data = array_merge($userResult->data()->data, $data);
             $result = null;
             foreach ($userResult->data()->data as $key => $value) {
-
                 if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
                     $result = $value->attributes;
                     break;
@@ -175,7 +175,7 @@ class PterodactylServerType implements ServerTypeInterface
                 $eggId = $params['eggId'];
             }
             [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer(), $params);
-            $name = $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId();
+            $name = $this->placeholder($item, $item->getOrder(), $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId());
             $memory = $config->memory;
             $swap = $config->swap;
             $io = $config->io;
@@ -183,7 +183,7 @@ class PterodactylServerType implements ServerTypeInterface
             $disk = $config->disk;
             $location_id = $config->locationId;
             $dedicated_ip = (bool)$config->dedicatedip;
-            $port_range = isset($config->portRange) ? explode('-', $config->portRange) : [];
+            $port_range = isset($config->portRange) ? explode(',', $config->portRange) : [];
             $port_range = collect($port_range)->map(function ($range) {
                 return (string) $range;
             })->toArray();
@@ -194,23 +194,23 @@ class PterodactylServerType implements ServerTypeInterface
             $backups = $config->backups;
 
             $oom_disabled = (bool)$config->oomKill;
-	    try {
-		$serviceId = (string)$item->getService()->getId();
-		$id = $this->getServerId($serviceId, $item->getServer(), false);
+            try {
+                $serviceId = (string)$item->getService()->getId();
+                $id = $this->getServerId($serviceId, $item->getServer());
 
-		if ($id != null){
-		    $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
-		    $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
-		    return 'success';
-		}
-	    } catch (\Exception $e) {
-
-	    }
+                if ($id != null) {
+                    $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
+                    $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
+                    return 'success';
+                }
+            } catch (\Exception $e) {
+            }
             $serverData = [
                 'name' => $name,
                 'user' => (int)$userId,
                 'nest' => (int)$nestId,
                 'egg' => (int)$eggId,
+                'description' => "Exp: " . $item->getService()->getExpireAt()->format('d/m/y H:i:s'),
                 'docker_image' => $image,
                 'startup' => $startup,
                 'oom_disabled' => $oom_disabled,
@@ -237,6 +237,8 @@ class PterodactylServerType implements ServerTypeInterface
             ];
             $server = Http::callApi($item->getServer(), 'servers', $serverData, 'POST');
             if ($server->status() === 400) {
+                //$this->logger->critical($server->toJson());
+
                 $this->error("satisfying");
             }
             if ($server->status() !== 201) {
@@ -245,7 +247,6 @@ class PterodactylServerType implements ServerTypeInterface
             }
             $this->container->get(PterodactylMailer::class)->sendTo($item->getOrder()->getUser(), $item->getServer(), $item->getService(), $password);
             $this->servers->saveServer($serviceId, $item->getServer()->getId(), $item->getItem()->getOrderable()->getId());
-
         } catch (Exception $e) {
             return $e->getMessage();
         }
@@ -395,5 +396,21 @@ class PterodactylServerType implements ServerTypeInterface
         }
         $this->logger->critical($message);
         throw new RuntimeException($message);
+    }
+
+    private function placeholder(OrderItem $orderItem, Order $order, string $message)
+    {
+
+        /** @var \App\Account\User $user */
+        $user = $order->getUser();
+        $context = [
+            'owner_email' => $user->getEmail(),
+            'owner_username' => $user->getName(),
+            'owner_firstname' => $user->getFirstname(),
+            'owner_lastname' => $user->getLastname(),
+            'order_id' => $order->getId(),
+            'product_name' => $orderItem->getItem()->getName()
+        ];
+        return str_replace('%', '', str_replace(array_keys($context), array_values($context), $message));
     }
 }

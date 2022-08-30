@@ -40,9 +40,9 @@ class PterodactylManualService implements CreateManualServiceInterface {
         $response = Http::callApi($server, "servers/$id/details",
         [
             'name' => $serverData->attributes->name,
-            'description' => $serverData->attributes->description,
             'external_id' => (string)$service->getId(),
-            'user' => $serverData->attributes->user
+            'user' => $serverData->attributes->user,
+            'description' => "Exp: ". $service->getExpireAt()->format('d/m/y')
         ]
         , "PATCH");
         $this->serversTable->saveServer($service->getId(),$server->getId(), $product->getId());
