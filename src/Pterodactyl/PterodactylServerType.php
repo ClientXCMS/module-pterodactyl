@@ -61,7 +61,7 @@ class PterodactylServerType implements ServerTypeInterface
         if ($item->getService() != null) {
             return $this->server->find($item->getService()->server->getId());
         }
-        
+
         $config = $this->pterodactyl->findConfig($item->getItem()->getOrderable()->getId());
         $serverId = $config->serverId;
         if ($serverId) {
@@ -148,24 +148,28 @@ class PterodactylServerType implements ServerTypeInterface
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
             $userResult = Http::callApi($item->getServer(), 'users/external/' . $user->getId());
-            $data = [];
-            $userResult = Http::callApi($item->getServer(), 'users?page=0&per_page=10000');
-            $data = array_merge($userResult->data()->data, $data);
-            $result = null;
-            foreach ($userResult->data()->data as $key => $value) {
-                if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
-                    $result = $value->attributes;
-                    break;
+            if ($userResult->status() == 404){
+                $userResult = Http::callApi($item->getServer(), 'users?filter[email]='. urlencode($user->getEmail()));
+                if($userResult->data()->meta->pagination->total === 0){
+
+                    $password = Str::randomStr(10);
+                    $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
+                    $userId = $result->id;
+                } else {
+
+                    foreach ($userResult->data()->data as $key => $value) {
+                        if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
+                            $result = $value->attributes;
+                            break;
+                        }
+                    }
+                    $userId = $result->id;
+                    $password = "Already set";
                 }
-            }
-            if ($result === null) {
-                $password = Str::randomStr(10);
-                $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
             } else {
-                $password = "Already set";
+                $userId = $userResult->data()->attributes->id;
             }
-            $userId = $result->id;
-            
+
             $eggs = json_decode($config->eggs, true);
             if (count($eggs) == 1) {
                 $first = current($eggs);
@@ -175,12 +179,12 @@ class PterodactylServerType implements ServerTypeInterface
                 $eggId = $params['eggId'];
             }
             [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer(), $params);
-            $name = $this->placeholder($item, $item->getOrder(), $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId());
-            $memory = $config->memory;
+            $name = $params['options']['servername']['value'] ?? $this->placeholder($item, $item->getOrder(), $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId());
+            $memory = $config->memory + ($params['options']['memory']['value'] ?? 0) * 1024;
             $swap = $config->swap;
             $io = $config->io;
             $cpu = $config->cpu;
-            $disk = $config->disk;
+            $disk = $config->disk + ($params['options']['disk']['value']  ?? 0) * 1024;
             $location_id = $config->locationId;
             $dedicated_ip = (bool)$config->dedicatedip;
             $port_range = isset($config->portRange) ? explode(',', $config->portRange) : [];
@@ -189,9 +193,9 @@ class PterodactylServerType implements ServerTypeInterface
             })->toArray();
             $image = $config->image ?? $eggResult->data()->attributes->docker_image;
             $startup = $config->startup ?? $eggResult->data()->attributes->startup;
-            $databases = $config->db;
+            $databases = $config->db ?? ($params['options']['database']['value'] ?? 0);
             $allocations = $config->allocations ?? 0;
-            $backups = $config->backups;
+            $backups = $config->backups ?? ($params['options']['backup']['value'] ?? 0);
 
             $oom_disabled = (bool)$config->oomKill;
             try {
@@ -235,6 +239,7 @@ class PterodactylServerType implements ServerTypeInterface
                 'start_on_completion' => true,
                 'external_id' => (string)$item->getService()->getId(),
             ];
+            return 'success';
             $server = Http::callApi($item->getServer(), 'servers', $serverData, 'POST');
             if ($server->status() === 400) {
                 //$this->logger->critical($server->toJson());
