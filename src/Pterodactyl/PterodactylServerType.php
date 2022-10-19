@@ -239,7 +239,7 @@ class PterodactylServerType implements ServerTypeInterface
                 'start_on_completion' => true,
                 'external_id' => (string)$item->getService()->getId(),
             ];
-            return 'success';
+           
             $server = Http::callApi($item->getServer(), 'servers', $serverData, 'POST');
             if ($server->status() === 400) {
                 //$this->logger->critical($server->toJson());
