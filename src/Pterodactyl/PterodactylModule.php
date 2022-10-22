@@ -17,8 +17,11 @@ class PterodactylModule extends Module
     const DEFINITIONS = __DIR__ . '/config.php';
     const MIGRATIONS = __DIR__ . '/db/migrations';
     const TRANSLATIONS = [
-        "fr_FR" => __DIR__ . '/trans/fr.php',
-        "en_GB" => __DIR__ . '/trans/en.php',
+        "fr_FR" => __DIR__ . "/trans/fr.php",
+        "en_GB" => __DIR__ . "/trans/en.php",
+        "uk_UA" => __DIR__ . "/trans/ua.php",
+        "es_ES" => __DIR__ . "/trans/es.php",
+        "de_DE" => __DIR__ . "/trans/de.php"
     ];
     public function __construct(ContainerInterface $container, ThemeInterface $theme, RendererInterface $renderer, Router $router, EventManager $eventManager)
     {
