@@ -384,10 +384,10 @@ class PterodactylServerType implements ServerTypeInterface
                 $action = Http::callApi($server, 'servers/' . $serverId . '/' . $terms, [], $method);
             }
             if ($action->status() !== 204) {
-                $this->error($terms, $action->status());
+                //$this->error($terms, $action->status());
             }
         } catch (Exception $err) {
-            return $err->getMessage();
+            //return $err->getMessage();
         }
         return "success";
     }
