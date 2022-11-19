@@ -153,7 +153,11 @@ class PterodactylServerType implements ServerTypeInterface
                 if($userResult->data()->meta->pagination->total === 0){
 
                     $password = Str::randomStr(10);
-                    $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
+                    $createUser = $this->makeAccount($user, $item->getServer(), $password);
+                    if ($createUser->status() != 200){
+                        return "Cannot create pterodactyl user";
+                    }
+                    $result = $createUser->data()->attributes;
                     $userId = $result->id;
                 } else {
 

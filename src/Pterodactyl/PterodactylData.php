@@ -98,6 +98,8 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             if ($response->status() == 200) {
                 $response = $response->data();
                 $eggs[$response->attributes->name] = $response->attributes->name;
+            } else {
+            throw new \Exception($server->getName() . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
             }
         }
         return [$inFiveM, $eggs];
@@ -119,6 +121,8 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
                 if ($response->attributes->name === $eggname) {
                     return [$nest, $egg];
                 }
+            } else {
+            throw new \Exception($server->getName() . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
             }
         }
     }
@@ -141,6 +145,8 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
                     $inFiveM = true;
                 }
             }
+        } else {
+            throw new \Exception($server->getName() . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
         }
         return $inFiveM;
     }

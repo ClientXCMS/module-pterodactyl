@@ -105,7 +105,11 @@ class PterodactylConfigAction extends ConfigAction
                 $attr = $data->attributes;
                 $nestId = $attr->id;
                 $nest = $attr;
-                $data = Http::callApi($server, "nests/$nestId/eggs")->data()->data;
+                $request = Http::callApi($server, "nests/$nestId/eggs");
+                if ($request->status() != 200){
+                    throw new \Exception($server->getName() . ' : Nests '. $nestId .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
+                }
+                $data = $request->data()->data;
                 $eggs = collect($data)->mapWithKeys(function ($data, $id) use ($nest) {
 
                     $attr = $data->attributes;
