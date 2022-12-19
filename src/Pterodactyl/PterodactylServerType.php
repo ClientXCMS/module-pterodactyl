@@ -154,7 +154,7 @@ class PterodactylServerType implements ServerTypeInterface
 
                     $password = Str::randomStr(10);
                     $createUser = $this->makeAccount($user, $item->getServer(), $password);
-                    if ($createUser->status() != 200){
+                    if ($createUser->status() != 201){
                         return "Cannot create pterodactyl user";
                     }
                     $result = $createUser->data()->attributes;
