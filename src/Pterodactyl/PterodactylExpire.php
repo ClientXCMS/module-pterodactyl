@@ -10,7 +10,7 @@ class PterodactylExpire
     public function __invoke(AddExpireEvent $event)
     {
         $service = $event->getTarget();
-        if ($service->getType() !== 'pterodactyl' && $service->getExpireAt() == null) {
+        if ($service->getType() !== 'pterodactyl' || $service->getExpireAt() == null) {
             return;
         }
         $serverResult = Http::callApi($service->server, 'servers/external/' . $service->getId() . "?include=allocations,utilization");
