@@ -218,7 +218,7 @@ class PterodactylServerType implements ServerTypeInterface
                 'user' => (int)$userId,
                 'nest' => (int)$nestId,
                 'egg' => (int)$eggId,
-                'description' => "Exp: " . $item->getService()->getExpireAt()->format('d/m/y H:i:s'),
+                'description' => $service->getExpireAt() != null ? "Exp: " . $item->getService()->getExpireAt()->format('d/m/y H:i:s') : ' Exp: None',
                 'docker_image' => $image,
                 'startup' => $startup,
                 'oom_disabled' => $oom_disabled,
