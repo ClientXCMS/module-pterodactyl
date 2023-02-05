@@ -44,7 +44,7 @@
                             </div>
 
                             <div class="col-md-6 col-sm-12">
-                                {{ field('swap', item.swap ?? -1, trans('pterodactyl.form.resources.swap')) }}
+                                {{ field('swap', item.swap ?? -1, trans('pterodactyl.form.resources.swap'), {help: trans('pterodactyl.form.resources.swaphelp')}) }}
                             </div>
                             <div class="col-md-6 col-sm-12">
                                 {{ field('cpu', item.cpu ?? 500,trans('pterodactyl.form.resources.cpu'),  {type: 'number'}) }}
@@ -84,11 +84,15 @@
                         {{ trans('pterodactyl.form.features.title') }}</div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-6 col-sm-12">
-                                {{ field('db', item.db, trans('pterodactyl.form.features.databases')  ~ ' (' ~ trans("optional") ~ ")") }}
+                            <div class="col-md-4 col-sm-12">
+                                {{ field('db', item.db ?? 0, trans('pterodactyl.form.features.databases')  ~ ' (' ~ trans("optional") ~ ")") }}
                             </div>
-                            <div class="col-md-6 col-sm-12">
-                                {{ field('backups', item.backups, trans('pterodactyl.form.features.backups')  ~ ' (' ~ trans("optional") ~ ")") }}
+                            <div class="col-md-4 col-sm-12">
+                                {{ field('allocations', item.allocations ?? 0, trans('pterodactyl.form.features.allocations')  ~ ' (' ~ trans("optional") ~ ")") }}
+                            </div>
+
+                            <div class="col-md-4 col-sm-12">
+                                {{ field('backups', item.backups ?? 0, trans('pterodactyl.form.features.backups')  ~ ' (' ~ trans("optional") ~ ")") }}
                             </div>
                         </div>
                     </div>

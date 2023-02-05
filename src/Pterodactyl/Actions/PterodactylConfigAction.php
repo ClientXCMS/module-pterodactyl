@@ -18,9 +18,10 @@ class PterodactylConfigAction extends ConfigAction
     protected array $fillable = [
         "memory", "disk", "io",
         "port_range", "swap", "cpu",
-        "servername", "eggs",
+        "servername", "eggs", "allocations",
         "location_id", "db", "backups",
-        "image", "startup",  "server_id"
+        "image", "startup",  "server_id",
+        "allocations"
     ];
     protected string $viewPath = "@pterodactyl_admin/config";
     protected array $types = ["pterodactyl"];
@@ -60,7 +61,7 @@ class PterodactylConfigAction extends ConfigAction
 
         $validator = (new Validator($data))
             ->between('io', 9, 9999)
-            ->min(-1, "swap")
+            ->numericOrZero( "swap")
             ->min(-1, "disk", "cpu", "memory")
             ->notEmpty('io', 'location_id');
         if (!empty($data['db'])) {
@@ -70,10 +71,12 @@ class PterodactylConfigAction extends ConfigAction
             $validator->min(0, "backups");
         }
 
-        if (isset($data['eggs'][0]) == false){
+        if (!empty($data['allocations'])) {
+            $validator->min(0, "allocations");
+        }
+        if (!isset($data['eggs'][0])){
             $validator->notEmpty('eggs[]');
         }
-
         if (!empty($data['servername'])) {
             $validator->length("servername", 1, 191);
         }

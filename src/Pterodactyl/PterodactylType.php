@@ -50,45 +50,44 @@ class PterodactylType implements ProductTypeInterface
     public function getData(): ?string
     {
         $url = request()->getUri()->getPath();
-        if (str_starts_with($url, '/basket') || str_starts_with($url, '/store')) {
+        if ($url == '/basket' || str_starts_with($url, '/basket') || str_starts_with($url, '/store')) {
             $id = 0;
             $match = $this->router->match(request());
             if ($match->getParams()['id'] ?? null) {
                 try {
                     $config = $this->table->findConfig($match->getParams()['id']);
                     $eggsAndNest = json_decode($config->eggs, true);
-
-                    [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest, $config->serverId);
-                    if ($inFiveM == false && count($eggsAndNest) == 1) {
+                    if (count($eggsAndNest) == 1) {
                         return null;
                     }
                 } catch (NoRecordException $e) {
                     return PterodactylData::class;
                 }
+            }else{
+                return null;
             }
         }
         return PterodactylData::class;
     }
 
 
-    private function getEggsAndFiveM(array $eggsAndNest, ?int $serverId = null): array
+    private function getEggs(array $eggsAndNest, ?int $serverId = null): array
     {
         $eggs = [];
-        $inFiveM = false;
         foreach ($eggsAndNest as $value) {
             [$egg, $nest] = explode(PterodactylConfigAction::DELIMITER, $value);
             
-        if ($serverId){
-            $server = $this->serverTable->find($serverId);
-        } else {
-            $server = $this->serverTable->findFirst(['pterodactyl']);
-        }
+            if ($serverId) {
+                $server = $this->serverTable->find($serverId);
+            } else {
+                $server = $this->serverTable->findFirst(['pterodactyl']);
+            }
             $response = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
             if ($response->status() == 200) {
                 $response = $response->data();
                 $eggs[$response->attributes->name] = $response->attributes->name;
             }
         }
-        return [$inFiveM, $eggs];
+        return $eggs;
     }
 }

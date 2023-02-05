@@ -11,10 +11,12 @@ use App\Pterodactyl\Database\ServersTable;
 use App\Shop\Entity\Order;
 use App\Shop\Entity\OrderItem;
 use App\Shop\Entity\Product;
+use App\Shop\Entity\Upgrade;
 use ClientX\Helpers\Passwords;
 use ClientX\Helpers\Str;
 use ClientX\Response\ConnectionResponse;
 use ClientX\ServerTypeInterface;
+use ClientX\ServerUpgradeInterface;
 use ClientX\Translator\Translater;
 use ClientX\Validator;
 use Exception;
@@ -24,7 +26,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-class PterodactylServerType implements ServerTypeInterface
+class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterface
 {
     private ServerTable $server;
     private PterodactylTable $pterodactyl;
@@ -133,8 +135,7 @@ class PterodactylServerType implements ServerTypeInterface
     public function validate(array $params): Validator
     {
         return (new Validator($params))
-            ->notEmpty('ipaddress', 'password', 'username')
-            ->inArray('secure', [0, 1]);
+            ->notEmpty('ipaddress', 'password', 'username');
     }
 
     public function createAccount(OrderItem $item): string
@@ -148,19 +149,17 @@ class PterodactylServerType implements ServerTypeInterface
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
             $userResult = Http::callApi($item->getServer(), 'users/external/' . $user->getId());
-            if ($userResult->status() == 404){
+            if ($userResult->status() == 404) {
                 $userResult = Http::callApi($item->getServer(), 'users?filter[email]='. urlencode($user->getEmail()));
-                if($userResult->data()->meta->pagination->total === 0){
-
+                if ($userResult->data()->meta->pagination->total === 0) {
                     $password = Str::randomStr(10);
                     $createUser = $this->makeAccount($user, $item->getServer(), $password);
-                    if ($createUser->status() != 201){
+                    if ($createUser->status() != 201) {
                         return "Cannot create pterodactyl user";
                     }
                     $result = $createUser->data()->attributes;
                     $userId = $result->id;
                 } else {
-
                     foreach ($userResult->data()->data as $key => $value) {
                         if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
                             $result = $value->attributes;
@@ -197,9 +196,9 @@ class PterodactylServerType implements ServerTypeInterface
             })->toArray();
             $image = $config->image ?? $eggResult->data()->attributes->docker_image;
             $startup = $config->startup ?? $eggResult->data()->attributes->startup;
-            $databases = $config->db ?? ($params['options']['database']['value'] ?? 0);
-            $allocations = $config->allocations ?? 0;
-            $backups = $config->backups ?? ($params['options']['backup']['value'] ?? 0);
+            $databases = $config->db + ($params['options']['database']['value'] ?? 0);
+            $allocations = ($config->allocations ?? 0) + ($params['options']['allocation']['value'] ?? 0);
+            $backups = $config->backups + ($params['options']['backup']['value'] ?? 0);
 
             $oom_disabled = (bool)$config->oomKill;
             try {
@@ -280,6 +279,51 @@ class PterodactylServerType implements ServerTypeInterface
     public function terminateAccount(Service $service): string
     {
         return $this->changeAccountStatus("DELETE", "terminate", $service->getId(), $service->server);
+    }
+
+    public function addOptions(array $options, Service $service): string
+    {
+        return "failed";
+    }
+
+    public function upgradeProduct(Upgrade $upgrade): string
+    {
+        $server = $upgrade->getService()->server;
+        $serverId = $this->getServerId($upgrade->getServiceId(), $server);
+        $request = Http::callApi($server, "servers/$serverId");
+        if ($request->successful()) {
+            $data = $request->data()->attributes;
+            $config = $this->pterodactyl->findConfig($upgrade->getNewproductId());
+            $memory = $config->memory;
+            $swap = $config->swap;
+            $io = $config->io;
+            $cpu = $config->cpu;
+            $disk = $config->disk;
+
+            $databases = $config->db;
+            $allocations = $config->allocations ?? 0;
+            $backups = $config->backups;
+            $patch = Http::callApi($server, "servers/$serverId/build", [
+                'allocation' => $data->allocation,
+                'memory' => (int)$memory,
+                'swap' => (int)$swap,
+                'io' => (int)$io,
+                'cpu' => (int)$cpu,
+                'disk' => (int)$disk,
+                'feature_limits' => [
+                    'databases' => $databases ? (int)$databases : null,
+                    'allocations' => (int)$allocations,
+                    'backups' => (int)$backups,
+                ]
+            ], 'PATCH');
+            if ($patch->successful()) {
+                return "success";
+            }
+            return json_decode($patch->toJson());
+        }
+        return json_decode($request->toJson());
+
+        return "failed";
     }
 
     public function changePassword(Service $service, ?string $password = null): string

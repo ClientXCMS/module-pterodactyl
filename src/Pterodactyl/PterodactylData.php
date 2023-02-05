@@ -49,7 +49,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         $config = $this->table->findConfig($productId);
         $eggsAndNest = json_decode($config->eggs, true);
 
-        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest, $config->serverId);
+        $eggs = $this->getEggs($eggsAndNest, $config->serverId);
         if (count($eggs) == 1) {
             $params['eggname'] = current($eggs);
         }
@@ -71,7 +71,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             return 'Configuration not found';
         }
         $eggsAndNest = json_decode($config->eggs, true);
-        [$inFiveM, $eggs] = $this->getEggsAndFiveM($eggsAndNest, $config->serverId);
+        $eggs = $this->getEggs($eggsAndNest, $config->serverId);
         $errors = $data['errors'];
         $item = $data['item'];
         $params = request()->getParsedBody();
@@ -82,10 +82,9 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         return $renderer->render("@pterodactyl/data", compact('eggs', 'productId', 'item', 'errors', 'inAdmin'));
     }
 
-    private function getEggsAndFiveM(array $eggsAndNest, ?int $serverId = null): array
+    private function getEggs(array $eggsAndNest, ?int $serverId = null): array
     {
         $eggs = [];
-        $inFiveM = false;
         foreach ($eggsAndNest as $value) {
             [$egg, $nest] = explode(PterodactylConfigAction::DELIMITER, $value);
 
@@ -102,7 +101,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             throw new \Exception($server->getName() . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
             }
         }
-        return [$inFiveM, $eggs];
+        return $eggs;
     }
 
     private function getEggsIdFromName(string $eggname, $eggs, ?int $serverId = null)
@@ -125,29 +124,5 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
             throw new \Exception($server->getName() . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
             }
         }
-    }
-
-    private function checkIfFiveMEgg(array $data, ?int $serverId = null)
-    {
-        $nest = $data['nestId'] ?? 0;
-        $egg = $data['eggId'] ?? 0;
-        if ($serverId){
-            $server = $this->serverTable->find($serverId);
-        } else {
-            $server = $this->serverTable->findFirst(['pterodactyl']);
-        }
-        $inFiveM = false;
-        $response = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
-        if ($response->status() == 200) {
-            $response = $response->data();
-            foreach ($response->attributes->relationships->variables->data as $key) {
-                if ($key->attributes->env_variable === 'FIVEM_LICENSE' && (is_null($key->attributes->default_value)|| empty($key->attributes->default_value))) {
-                    $inFiveM = true;
-                }
-            }
-        } else {
-            throw new \Exception($server->getName() . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
-        }
-        return $inFiveM;
     }
 }
