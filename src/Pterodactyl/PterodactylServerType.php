@@ -265,6 +265,12 @@ class PterodactylServerType implements ServerTypeInterface
     {
         return $this->terminateAccount($service);
     }
+    
+    
+    public function removeOption(string $option, Service $service): string
+    {
+        return "failed";
+    }
 
     public function suspendAccount(Service $service): string
     {
