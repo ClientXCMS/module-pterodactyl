@@ -171,6 +171,8 @@ class PterodactylServerType implements ServerTypeInterface
                 }
             } else {
                 $userId = $userResult->data()->attributes->id;
+                
+                $password = "Already set";
             }
 
             $eggs = json_decode($config->eggs, true);
