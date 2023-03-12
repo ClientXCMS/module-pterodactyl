@@ -26,7 +26,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
-class PterodactylServerType implements ServerTypeInterface
+class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterface
 {
     private ServerTable $server;
     private PterodactylTable $pterodactyl;
