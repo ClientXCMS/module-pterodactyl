@@ -28,8 +28,8 @@ use RuntimeException;
 
 class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterface
 {
-    private ServerTable $server;
-    private PterodactylTable $pterodactyl;
+    protected ServerTable $server;
+    protected PterodactylTable $pterodactyl;
     private ServersTable $servers;
     private Translater $translater;
     private LoggerInterface $logger;
