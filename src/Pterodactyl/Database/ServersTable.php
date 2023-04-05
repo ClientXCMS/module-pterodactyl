@@ -23,12 +23,13 @@ class ServersTable extends \ClientX\Database\Table
 
     public function saveServer(int $serviceId, int $serverId, int $productId)
     {
-        return $this->makeQuery()
-        ->setCommand("INSERT")
-        ->params([
+        if ($this->existsBy("service_id", $serviceId)){
+            return $this->update($serviceId,['server_id' => $serverId], 'service_id');
+        }
+        return $this->insert([
             'service_id' => $serviceId,
             'server_id' => $serverId,
             'product_id' => $productId
-        ])->execute();
+        ]);
     }
 }
