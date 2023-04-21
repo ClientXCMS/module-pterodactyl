@@ -176,12 +176,13 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             }
 
             $eggs = json_decode($config->eggs, true);
-            if (count($eggs) == 1) {
+            
+            if (count($eggs) == 1 || !array_key_exists('nestId', $params)) {
                 $first = current($eggs);
                 [$eggId, $nestId] = explode(PterodactylConfigAction::DELIMITER, $first);
             } else {
-                $nestId = $params['nestId'];
-                $eggId = $params['eggId'];
+                $nestId = $params['nestId'] ?? '';
+                $eggId = $params['eggId'] ?? '';
             }
             [$environment, $eggResult] = $this->getEnvFromNest($eggId, $nestId, $item->getServer(), $params);
             $name = $params['options']['servername']['value'] ?? $this->placeholder($item, $item->getOrder(), $config->servername ?? Str::randomStr(10) . ' # ' . $item->getService()->getId());
