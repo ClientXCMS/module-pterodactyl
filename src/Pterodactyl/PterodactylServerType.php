@@ -148,33 +148,46 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             $params = $item->getData();
             $config = $this->pterodactyl->findConfig($orderable->getId());
             $user = $item->getOrder()->getUser();
-            $userResult = Http::callApi($item->getServer(), 'users/external/' . $user->getId());
-            if ($userResult->status() == 404) {
-                $userResult = Http::callApi($item->getServer(), 'users?filter[email]='. urlencode($user->getEmail()));
-                if ($userResult->data()->meta->pagination->total === 0) {
+            
+            $data = [];
+            $userResult = Http::callApi($item->getServer(), 'users');
+            $data = array_merge($userResult->data()->data, $data);
+            $result = null;
+            foreach ($userResult->data()->data as $key => $value) {
+                if ($value->attributes->email == strtolower($user->getEmail())) {
+                    $result = $value->attributes;
+                    break;
+                }
+            }
+            
+                if ($result === null) {
                     $password = Str::randomStr(10);
-                    $createUser = $this->makeAccount($user, $item->getServer(), $password);
-                    if ($createUser->status() != 201) {
-                        return "Cannot create pterodactyl user";
-                    }
-                    $result = $createUser->data()->attributes;
-                    $userId = $result->id;
+                    $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
                 } else {
-                    foreach ($userResult->data()->data as $key => $value) {
-                        if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
-                            $result = $value->attributes;
-                            break;
+                    $password = "Already set";
+                    
+                    $serverResult = Http::callApi($item->getServer(), 'servers');
+                    $i = 0;
+                    foreach ($serverResult->data()->data as $key => $value) {
+                        if ($value->attributes->user == $result->id) {
+                            $i++;
                         }
                     }
-                    $userId = $result->id;
-                    $password = "Already set";
-                }
-            } else {
-                $userId = $userResult->data()->attributes->id;
-                
-                $password = "Already set";
+                    if ($i === 0) {
+                        $password = Str::randomStr(10);
+                        $updateResult = Http::callApi($item->getServer(), 'users/' . $result->id, [
+                            'username' => $result->username,
+                            'email' => $result->email,
+                            'first_name' => $result->first_name,
+                            'last_name' => $result->last_name,
+                            'password' => $password,
+                        ], 'PATCH');
+                        if ($updateResult->status() !== 200) {
+                            $this->error("changepwd", $updateResult->status());
+                        }
+                    }
             }
-
+            $userId = $result->id;
             $eggs = json_decode($config->eggs, true);
             
             if (count($eggs) == 1 || !array_key_exists('nestId', $params)) {
