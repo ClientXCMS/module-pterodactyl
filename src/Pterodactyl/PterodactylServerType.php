@@ -40,7 +40,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
     /**
      * @var \Psr\Container\ContainerInterface
      */
-    private ContainerInterface $container;
+    protected ContainerInterface $container;
 
     public function __construct(
         LoggerInterface $logger,
@@ -387,7 +387,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
         return "failed";
     }
 
-    private function makeAccount(User $user, Server $server, string $password)
+    protected function makeAccount(User $user, Server $server, string $password)
     {
         return Http::callApi($server, 'users', [
             "username" => Str::slugify($user->getName()) . $user->getId(),
