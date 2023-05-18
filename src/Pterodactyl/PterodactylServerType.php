@@ -150,7 +150,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             $user = $item->getOrder()->getUser();
             
             $data = [];
-            $userResult = Http::callApi($item->getServer(), 'users');
+            $userResult = Http::callApi($item->getServer(), 'users?per_page=1000');
             $data = array_merge($userResult->data()->data, $data);
             $result = null;
             foreach ($userResult->data()->data as $key => $value) {
