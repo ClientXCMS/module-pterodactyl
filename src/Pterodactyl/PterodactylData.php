@@ -53,7 +53,7 @@ class PterodactylData implements \ClientX\Product\ProductDataInterface
         if (count($eggs) == 1) {
             $params['eggname'] = current($eggs);
         }
-        [$nestId, $eggId] = $this->getEggsIdFromName($params['eggname'], $eggsAndNest, $config->serverId);
+        [$nestId, $eggId] = $this->getEggsIdFromName($params['eggname'] ?? current($eggs), $eggsAndNest, $config->serverId);
         $params['eggId'] = $eggId;
         $params['nestId'] = $nestId;
 
