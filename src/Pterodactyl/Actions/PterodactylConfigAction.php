@@ -98,6 +98,11 @@ class PterodactylConfigAction extends ConfigAction
     {
         $nests = collect($this->servers)->map(function (Server $server) {
             $response = Http::callApi($server, 'nests')->data();
+            if ($response == null){
+
+                $this->service->getFlash()->error($server->getName() . ' : Error PHPMyAdmin detected. Please use domain name.');
+                $data = [];
+            }
             if (property_exists($response, 'data')) {
                 $data = $response->data;
             } else {
@@ -127,6 +132,11 @@ class PterodactylConfigAction extends ConfigAction
         })->toArray();
         $locations = collect($this->servers)->mapWithKeys(function (Server $server) {
             $response = Http::callApi($server, 'locations')->data();
+            if ($response == null){
+
+                $this->service->getFlash()->error($server->getName() . ' : Error PHPMyAdmin detected. Please use domain name.');
+                $data = [];
+            }
             if (property_exists($response, 'data')) {
                 $data = $response->data;
             } else {
