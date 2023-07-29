@@ -434,6 +434,9 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             $attr = $val->attributes;
             $var = $attr->env_variable;
             $default = $attr->default_value;
+            if ($key == "FIVEM_LICENSE" && $default == null){
+                $default = "Change me";
+            }
             $envName = $data[$attr->env_variable] ?? $default;
             $environment[$var] = $envName;
         }
