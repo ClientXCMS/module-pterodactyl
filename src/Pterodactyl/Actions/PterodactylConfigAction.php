@@ -21,7 +21,7 @@ class PterodactylConfigAction extends ConfigAction
         "servername", "eggs", "allocations",
         "location_id", "db", "backups",
         "image", "startup",  "server_id",
-        "allocations"
+        "allocations","dedicatedip"
     ];
     protected string $viewPath = "@pterodactyl_admin/config";
     protected array $types = ["pterodactyl"];
