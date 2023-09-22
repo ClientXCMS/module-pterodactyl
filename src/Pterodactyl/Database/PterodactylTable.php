@@ -19,6 +19,7 @@ class PterodactylTable extends AbstractConfigurationTable
         $data['nest_id'] = 0;
         $data = array_merge($data, ['product_id' => $productId]);
         
+        $data['dedicatedip'] = (int)array_key_exists('dedicatedip', $data);
         foreach (["port_range", "servername", "image", "startup", "db", "backups"] as $key) {
             if (empty($data[$key])) {
                 if (in_array($key, ["db", "backups"])) {
@@ -36,6 +37,7 @@ class PterodactylTable extends AbstractConfigurationTable
 
         $data['eggs'] = json_encode($data['eggs']);
         
+        $data['dedicatedip'] = (int)array_key_exists('dedicatedip', $data);
         foreach (["port_range", "servername", "image", "startup", "db", "backups"] as $key) {
             if (empty($data[$key])) {
                 if (in_array($key, ["db", "backups"])) {
