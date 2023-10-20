@@ -488,7 +488,8 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             'owner_firstname' => $user->getFirstname(),
             'owner_lastname' => $user->getLastname(),
             'order_id' => $order->getId(),
-            'product_name' => $orderItem->getItem()->getName()
+            'product_name' => $orderItem->getItem()->getName(),
+            'service_id' => $orderItem->getItem()->getService()->getId(),
         ];
         return str_replace('%', '', str_replace(array_keys($context), array_values($context), $message));
     }
