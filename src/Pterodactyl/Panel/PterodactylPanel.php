@@ -11,11 +11,11 @@ use App\Auth\Database\UserTable;
 class PterodactylPanel implements PanelInterface
 {
     const STATS = [
-        "memory" => ["secondary", "fas fa-atom"],
-        "swap" => ["info", "fas fa-memory", "used"],
-        "disk" => ["success", "fas fa-microchip"],
-        "io" => ["danger", "fas fa-hdd"],
-        "cpu" => ["dark", "fas fa-hdd"]
+        "memory" => ["secondary", "fas fa-memory"],
+        "swap" => ["info", "fas fa-signal", "used"],
+        "disk" => ["success", "fas fa-hdd"],
+        "io" => ["danger", "fas fa-satellite-dish"],
+        "cpu" => ["dark", "fas fa-microchip"]
     ];
 
      
