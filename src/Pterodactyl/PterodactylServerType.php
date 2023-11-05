@@ -150,19 +150,33 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             $user = $item->getOrder()->getUser();
             
             $data = [];
-            $userResult = Http::callApi($item->getServer(), 'users?per_page=1000');
-            $data = array_merge($userResult->data()->data, $data);
-            $result = null;
-            foreach ($userResult->data()->data as $key => $value) {
-                if ($value->attributes->email == strtolower($user->getEmail())) {
+            $userResult = Http::callApi($item->getServer(), "users?per_page=300&page=1");
+            $userData = $userResult->data()->data;
+
+            foreach ($userData as $key => $value) {
+                if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
                     $result = $value->attributes;
                     break;
                 }
             }
-            
+        
+            for($i = 2; $i < $userResult->data()->meta->pagination->total_pages;$i++) {
+                $userResult = Http::callApi($item->getServer(), "users?per_page=300&page=$i");
+                $userData = $userResult->data()->data;
+                foreach ($userData as $key => $value) {
+                    if (strtolower($value->attributes->email) == strtolower($user->getEmail())) {
+                        $result = $value->attributes;
+                        break;
+                    }
+                }
+            }
                 if ($result === null) {
                     $password = Str::randomStr(10);
-                    $result = $this->makeAccount($user, $item->getServer(), $password)->data()->attributes;
+                    $make = $this->makeAccount($user, $item->getServer(), $password)->data();
+                    if (property_exists($make, 'errors')){
+                        return json_encode($make->errors);
+                    }
+                    $result = $make->attributes;
                 } else {
                     $password = "Already set";
                     
@@ -394,7 +408,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             "email" => $user->getEmail(),
             "first_name" => $user->getFirstname(),
             "last_name" => $user->getLastname(),
-            "external_id" => (string)"CLIENTXCMS-" . str_pad($user->getId(), 5),
+            "external_id" => (string)"CLIENTXCMS2-" . str_pad($user->getId(), 5),
             "password" => $password,
         ], 'POST');
     }
