@@ -150,6 +150,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             $user = $item->getOrder()->getUser();
             
             $data = [];
+            $result = null;
             $userResult = Http::callApi($item->getServer(), "users?per_page=300&page=1");
             $userData = $userResult->data()->data;
 
@@ -160,7 +161,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
                 }
             }
         
-            for($i = 2; $i < $userResult->data()->meta->pagination->total_pages;$i++) {
+            for($i = 2; $i <= $userResult->data()->meta->pagination->total_pages;$i++) {
                 $userResult = Http::callApi($item->getServer(), "users?per_page=300&page=$i");
                 $userData = $userResult->data()->data;
                 foreach ($userData as $key => $value) {
@@ -448,6 +449,7 @@ class PterodactylServerType implements ServerTypeInterface, ServerUpgradeInterfa
             $attr = $val->attributes;
             $var = $attr->env_variable;
             $default = $attr->default_value;
+            $envName = $data[$attr->env_variable] ?? null;
             
             if ($attr->env_variable == "FIVEM_LICENSE" && ($envName == null || empty($envName))){
                 $default = "Change me";
