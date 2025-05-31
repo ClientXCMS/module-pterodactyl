@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
@@ -97,35 +98,33 @@ class PterodactylTest extends TestCase
     }
 */
 
-public function updateAccountOnPterodactyl(string $email, int $id, Server $server)
+    public function updateAccountOnPterodactyl(string $email, int $id, Server $server)
     {
-        $request = \App\Modules\Pterodactyl\Http::callApi($server, 'users/'. $id);
+        $request = \App\Modules\Pterodactyl\Http::callApi($server, 'users/'.$id);
         $data = $request->toJson();
-        $response = \App\Modules\Pterodactyl\Http::callApi($server, 'users/' . $id, [
+        $response = \App\Modules\Pterodactyl\Http::callApi($server, 'users/'.$id, [
             'email' => $email,
             'username' => $data->attributes->username,
             'first_name' => $data->attributes->first_name,
             'last_name' => $data->attributes->last_name,
         ], 'PATCH');
-        if ($response->successful()){
+        if ($response->successful()) {
             return true;
         }
         throw new \Exception('Error while updating user');
-
     }
 
     private function deleteAccountOnPterodactyl(int $id, Server $server)
     {
-        \App\Modules\Pterodactyl\Http::callApi($server, 'users/' . $id, [], 'DELETE');
+        \App\Modules\Pterodactyl\Http::callApi($server, 'users/'.$id, [], 'DELETE');
     }
-
 
     private function deleteServerOnPterodactyl(int $serviceId, Server $server)
     {
-        $fetch = \App\Modules\Pterodactyl\Http::callApi($server, 'servers/external/' . $serviceId);
-        if ($fetch->successful()){
+        $fetch = \App\Modules\Pterodactyl\Http::callApi($server, 'servers/external/'.$serviceId);
+        if ($fetch->successful()) {
             $serverId = $fetch->toJson()->attributes->id;
-            \App\Modules\Pterodactyl\Http::callApi($server, 'servers/' . $serverId, [], 'DELETE');
+            \App\Modules\Pterodactyl\Http::callApi($server, 'servers/'.$serverId, [], 'DELETE');
         }
     }
 }

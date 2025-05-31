@@ -1,24 +1,26 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
  * For more information, please consult our support: clientxcms.com/client/support.
  * Year: 2024
  */
+
 namespace App\Modules\Pterodactyl;
 
 use App\Abstracts\AbstractConfig;
-use App\Models\Provisioning\Server;
 use App\Models\Store\Product;
 use Illuminate\Support\Facades\Cache;
-use Session;
 
 class PterodactylConfig extends AbstractConfig
 {
     protected string $type = 'pterodactyl';
+
     protected string $model = \App\Modules\Pterodactyl\Models\PterodactylConfig::class;
 
     use PterodactylConfigTrait;
+
     protected $fillable = [
         'product_id',
         'memory',
@@ -51,10 +53,11 @@ class PterodactylConfig extends AbstractConfig
             'delimiter' => \App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER,
             'servers' => $this->fetchServers(),
             'product' => $product,
-            'config' => $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig()),
+            'config' => $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig),
         ];
         $context['currenteggs'] = $context['config']->eggs ?? [];
-        return view($this->type . '_admin::product-config', $context);
+
+        return view($this->type.'_admin::product-config', $context);
     }
 
     public function validate(): array
@@ -92,10 +95,8 @@ class PterodactylConfig extends AbstractConfig
     {
         $parameters['eggs'] = json_encode($parameters['eggs']);
         $this->model::where('product_id', $product->id)->update($parameters);
-        Cache::delete($this->type . '_parameters_' . $product->id);
-        Cache::delete($this->type . '_render_' . $product->id);
-        Cache::delete($this->type . '_eggs_' . $product->id);
+        Cache::delete($this->type.'_parameters_'.$product->id);
+        Cache::delete($this->type.'_render_'.$product->id);
+        Cache::delete($this->type.'_eggs_'.$product->id);
     }
-
-
 }

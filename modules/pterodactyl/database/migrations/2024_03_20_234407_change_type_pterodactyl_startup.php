@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
@@ -17,7 +18,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pterodactyl_configs', function (Blueprint $table) {
-            $table->text('startup')->change();
+            $table->text('startup')->nullable()->change();
         });
     }
 
@@ -27,7 +28,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('pterodactyl_configs', function (Blueprint $table) {
-            $table->string('startup')->change();
+            $table->string('startup')->nullable()->change();
         });
     }
 };

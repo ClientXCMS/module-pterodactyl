@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
@@ -17,6 +18,8 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 {
     protected array $parameters = ['eggname', 'egg_id', 'nest_id'];
 
+    protected string $namespace = 'pterodactyl';
+
     public function primary(ProductDataDTO $productDataDTO): string
     {
         return $productDataDTO->data['eggname'] ?? '';
@@ -28,22 +31,41 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
         if ($config == null) {
             return __('provisioning.product_not_configured');
         }
-
-        return Cache::rememberForever("pterodactyl_render_{$productDataDTO->product->id}", function () use ($config, $productDataDTO) {
-            $eggs = $config->eggs;
-            if (count($eggs) == 1) {
-                [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $eggs[0]);
+        $eggs = Cache::rememberForever("pterodactyl_http_{$productDataDTO->product->id}", function () use ($productDataDTO, $config) {
+            if (count($config->eggs) == 1) {
+                [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $config->eggs[0]);
                 $result = Http::callApi(Server::find($config->server_id), "nests/$nest/eggs/$egg");
                 if ($result->status() == 200) {
-                    return 'Eggs : ' . $result->toJson()->attributes->name;
+                    return [
+                        'eggnames' => [$result->toJson()->attributes->name => $result->toJson()->attributes->name],
+                        'defaultEgg' => $result->toJson()->attributes->name,
+                    ];
                 }
-                return 'Default egg : Not found';
+
+                return [
+                    'eggnames' => [],
+                    'defaultEgg' => 'Not found',
+                ];
             }
-            $eggs = $this->getEggs($eggs, $config->server_id, $productDataDTO->product->id);
-            $data['eggnames'] = $eggs;
-            $data['eggname'] = $productDataDTO->data['eggname'] ?? '';
-            return view($productDataDTO->product->type . '::product-data', $data)->render();
+            $eggs = $this->getEggs($config->eggs, $config->server_id, $productDataDTO->product->id);
+
+            return [
+                'eggnames' => $eggs,
+                'defaultEgg' => $eggs[array_key_first($eggs)] ?? '',
+            ];
         });
+
+        $data['eggnames'] = $eggs['eggnames'];
+        $data['eggname'] = $productDataDTO->data['eggname'] ?? $eggs['defaultEgg'];
+
+        return view($this->namespace.'::product-data', $data)->render();
+    }
+
+    public function renderAdmin(ProductDataDTO $productDataDTO)
+    {
+        $this->namespace = 'pterodactyl_admin';
+
+        return $this->render($productDataDTO);
     }
 
     public function validate(): array
@@ -53,41 +75,39 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function parameters(ProductDataDTO $productDataDTO): array
     {
-        return Cache::rememberForever("pterodactyl_parameters_{$productDataDTO->product->id}", function () use ($productDataDTO) {
-            $eggname = $productDataDTO->parameters['eggname'] ?? null;
-            $config = $this->getConfig($productDataDTO->product->id);
+        $eggname = $productDataDTO->parameters['eggname'] ?? null;
+        $config = $this->getConfig($productDataDTO->product->id);
 
-            if ($config == null) {
-                return [
-                    'error' => 'Please configure your product data in the admin panel',
-                ];
-            }
-            if ($config->server_id == null) {
-                return [
-                    'error' => 'Please configure your product data in the admin panel',
-                ];
-            }
-
-            if ($eggname == null) {
-                $server = Server::find($config->server_id);
-                [$egg, $nest] = explode(PterodactylConfig::DELIMITER, current($config->eggs));
-                $request = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
-                if ($request->status() == 200) {
-                    $eggname = $request->toJson()->attributes->name;
-                } else {
-                    $eggname = "Default";
-                }
-            } else {
-                $eggs = $config->eggs;
-                [$egg, $nest] = $this->getEgg($eggs, $eggname, $config->server_id);
-            }
-
+        if ($config == null) {
             return [
-                'eggId' => $egg,
-                'nestId' => $nest,
-                'eggname' => $eggname,
+                'error' => 'Please configure your product data in the admin panel',
             ];
-        });
+        }
+        if ($config->server_id == null) {
+            return [
+                'error' => 'Please configure your product data in the admin panel',
+            ];
+        }
+
+        if ($eggname == null) {
+            $server = Server::find($config->server_id);
+            [$egg, $nest] = explode(PterodactylConfig::DELIMITER, current($config->eggs));
+            $request = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
+            if ($request->status() == 200) {
+                $eggname = $request->toJson()->attributes->name;
+            } else {
+                $eggname = 'Default';
+            }
+        } else {
+            $eggs = $config->eggs;
+            [$egg, $nest] = $this->getEgg($eggs, $eggname, $config->server_id);
+        }
+
+        return [
+            'eggId' => $egg,
+            'nestId' => $nest,
+            'eggname' => $eggname,
+        ];
     }
 
     public function getEggs(array $eggsAndNest, int $serverId, int $productId): array
@@ -102,9 +122,10 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
                     $response = $response->toJson();
                     $eggs[$response->attributes->name] = $response->attributes->name;
                 } else {
-                    throw new \Exception($server->name . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
+                    throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
                 }
             }
+
             return $eggs;
         });
     }
@@ -123,9 +144,10 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
                         return [$egg, $nest];
                     }
                 } else {
-                    throw new \Exception($server->name . ' : Egg '. $egg .' cannot be reached (check your application key permission) Statut code : ' . $response->status());
+                    throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
                 }
             }
+
             return [null, null];
         });
     }

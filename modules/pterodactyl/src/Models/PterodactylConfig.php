@@ -1,10 +1,12 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
  * For more information, please consult our support: clientxcms.com/client/support.
  * Year: 2024
  */
+
 namespace App\Modules\Pterodactyl\Models;
 
 use App\Models\Account\Customer;
@@ -19,7 +21,7 @@ class PterodactylConfig extends Model
 {
     use HasFactory;
 
-    const DELIMITER = "---------";
+    const DELIMITER = '---------';
 
     protected $fillable = [
         'product_id',
@@ -80,6 +82,7 @@ class PterodactylConfig extends Model
         $portRange = collect($portRange)->map(function ($range) {
             return (string) $range;
         })->toArray();
+
         return [
             'name' => $this->placeholder($dto->service, $dto->customer, $this->server_name ?? '%owner_username%\'s server'),
             'description' => $this->placeholder($dto->service, $dto->customer, $this->server_description ?? '%service_expiration%'),
@@ -89,11 +92,11 @@ class PterodactylConfig extends Model
             'docker_image' => $this->image ?? $dto->image,
             'startup' => $this->startup ?? $dto->startup,
             'limits' => [
-                'memory' => (int)(($this->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
+                'memory' => (int) (($this->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
                 'swap' => $this->swap + $service->getOptionValue('additional_swap', 0),
-                'disk' => (int)(($this->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
+                'disk' => (int) (($this->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
                 'io' => $this->io + $service->getOptionValue('additional_io', 0),
-                'cpu' => ($this->cpu  + $service->getOptionValue('additional_cpu', 0)),
+                'cpu' => ($this->cpu + $service->getOptionValue('additional_cpu', 0)),
             ],
             'feature_limits' => [
                 'databases' => $this->databases + $service->getOptionValue('additional_databases', 0),
@@ -101,29 +104,31 @@ class PterodactylConfig extends Model
                 'backups' => $this->backups + $service->getOptionValue('additional_backups', 0),
             ],
             'deploy' => [
-                'locations' => [$service->getOptionValue($service->type . '_location_id', $this->location_id)],
-                'dedicated_ip' => (int)($service->getOptionValue($service->type . '_dedicated_ip', $this->dedicated_ip ? 'true' : 'false') == 'true'),
+                'locations' => [$service->getOptionValue($service->type.'_location_id', $this->location_id)],
+                'dedicated_ip' => (int) ($service->getOptionValue($service->type.'_dedicated_ip', $this->dedicated_ip ? 'true' : 'false') == 'true'),
                 'port_range' => $portRange,
             ],
             'environment' => $dto->environment,
             'start_on_completion' => true,
-            'external_id' => (string)$dto->service->id,
+            'external_id' => (string) $dto->service->id,
         ];
     }
 
     private function placeholder(Service $service, Customer $customer, ?string $message = null)
     {
-        if ($message == null) return null;
+        if ($message == null) {
+            return null;
+        }
         $context = [
             'owner_email' => $customer->email,
-            'owner_username' => $customer->firstname . ' ' . $customer->lastname,
+            'owner_username' => $customer->firstname.' '.$customer->lastname,
             'owner_firstname' => $customer->firstname,
             'owner_lastname' => $customer->lastname,
             'product_name' => $this->product->name,
             'service_id' => $service->id,
             'service_expiration' => $service->expires_at != null ? $service->expires_at->format('d/m/y') : 'Exp: None',
         ];
+
         return str_replace('%', '', str_replace(array_keys($context), array_values($context), $message));
     }
-
 }

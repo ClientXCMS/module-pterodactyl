@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
@@ -11,7 +12,7 @@ Route::name('pterodactyl')
     ->name('pterodactyl.')
     ->prefix('pterodactyl')
     ->middleware('throttle:pterodactyl-power-actions')
-    ->group(function() {
+    ->group(function () {
         \Route::post('/power/{service}/{power}', [PterodactylController::class, 'power'])
             ->name('power')
             ->where('power', 'start|stop|restart');

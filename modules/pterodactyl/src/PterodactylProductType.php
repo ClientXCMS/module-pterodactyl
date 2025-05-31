@@ -1,10 +1,12 @@
 <?php
+
 /*
  * This file is part of the CLIENTXCMS project.
  * This file is the property of the CLIENTXCMS association. Any unauthorized use, reproduction, or download is prohibited.
  * For more information, please consult our support: clientxcms.com/client/support.
  * Year: 2024
  */
+
 namespace App\Modules\Pterodactyl;
 
 use App\Abstracts\AbstractProductType;
@@ -16,36 +18,37 @@ use App\Models\Store\Product;
 class PterodactylProductType extends AbstractProductType
 {
     protected string $title = 'Pterodactyl';
+
     protected string $uuid = 'pterodactyl';
+
     protected string $type = self::SERVICE;
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function panel(): ?PanelProvisioningInterface
     {
-        return new PterodactylPanel();
+        return new PterodactylPanel;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
     public function server(): ?ServerTypeInterface
     {
-        return new PterodactylServerType();
+        return new PterodactylServerType;
     }
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      */
-    public function data(?Product $product=null): ?\App\Contracts\Store\ProductDataInterface
+    public function data(?Product $product = null): ?\App\Contracts\Store\ProductDataInterface
     {
-        return new PterodactylData();
+        return new PterodactylData;
     }
 
     public function config(): ?ProductConfigInterface
     {
-        return new PterodactylConfig();
+        return new PterodactylConfig;
     }
-
 }

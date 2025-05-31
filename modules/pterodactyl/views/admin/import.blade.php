@@ -10,4 +10,4 @@
 <h2 class="text-xl font-semibold text-gray-800 dark:text-gray-200">
     {{ __('provisioning.admin.services.create.choose') }}
 </h2>
-@include('shared/select', ['name' => 'pterodactylserver_id', 'label' => __('client.services.server'), 'options' => $servers, 'value' => old('pterodactylserver_id')])
+@include('admin/shared/select', ['name' => 'pterodactylserver_id', 'label' => __('global.server'), 'options' => $servers, 'value' => old('pterodactylserver_id')])
