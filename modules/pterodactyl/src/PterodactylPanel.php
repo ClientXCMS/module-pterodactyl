@@ -68,8 +68,8 @@ class PterodactylPanel extends AbstractPanelProvisioning
             $data['utilization'] = $serverResult->getUtilization($service->server);
         } catch (ExternalApiException $e) {
             logger()->error($e->getMessage());
-            if (array_key_exists('*', $permissions)) {
-                Session::flash('error', $e->getMessage());
+            if (in_array('*', $permissions)) {
+                \Session::flash('error', $e->getMessage());
             } else {
                 \Session::flash('error', __('client.alerts.internalerror'));
             }

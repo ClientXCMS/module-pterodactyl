@@ -63,6 +63,9 @@ class PterodactylResponse
             return 'Empty error';
         }
         return collect($this->toJson()->errors ?? [])->map(function ($error) {
+            if (is_array($error)) {
+                return $error[0];
+            }
             return $error->detail ?? $error->code;
         })->implode(', ');
     }
@@ -70,8 +73,6 @@ class PterodactylResponse
     public function isExternalIdAlreadyUsed(): bool
     {
         $errors = ['The external id field has already been taken', 'The external id has already been taken.'];
-        $error = $this->toJson()->errors[0];
-
-        return $this->response->status() === 422 && in_array($error->detail ?? $error->code, $errors);
+        return $this->response->status() === 422 && in_array(explode(', ', $this->formattedErrors()), $errors);
     }
 }

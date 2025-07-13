@@ -27,6 +27,9 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function render(ProductDataDTO $productDataDTO)
     {
+        if ($productDataDTO->product == null) {
+            return 'Product not found';
+        }
         $config = $this->getConfig($productDataDTO->product->id);
         if ($config == null) {
             return __('provisioning.product_not_configured');
@@ -122,7 +125,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
                     $response = $response->toJson();
                     $eggs[$response->attributes->name] = $response->attributes->name;
                 } else {
-                    throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
+                    //throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
                 }
             }
 
@@ -144,7 +147,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
                         return [$egg, $nest];
                     }
                 } else {
-                    throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
+                    //throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
                 }
             }
 
