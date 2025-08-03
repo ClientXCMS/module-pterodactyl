@@ -17,6 +17,62 @@ use App\Modules\Pterodactyl\DTO\PterodactylConfigDTO;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * 
+ *
+ * @property int $id
+ * @property int $product_id
+ * @property float $memory
+ * @property float $disk
+ * @property int $io
+ * @property int $cpu
+ * @property int|null $node_id
+ * @property array $eggs
+ * @property int $location_id
+ * @property int $server_id
+ * @property int $backups
+ * @property string|null $image
+ * @property string|null $startup
+ * @property int $dedicated_ip
+ * @property int $oom_kill
+ * @property string|null $server_name
+ * @property string|null $server_description
+ * @property int $swap
+ * @property string|null $port_range
+ * @property int $databases
+ * @property int $allocations
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read Product $product
+ * @property-read Server $server
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereAllocations($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereBackups($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereCpu($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereDatabases($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereDedicatedIp($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereDisk($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereEggs($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereImage($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereIo($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereLocationId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereMemory($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereNodeId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereOomKill($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig wherePortRange($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereProductId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereServerDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereServerId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereServerName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereStartup($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereSwap($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class PterodactylConfig extends Model
 {
     use HasFactory;
