@@ -18,7 +18,7 @@
         @include("admin/shared/input", ['name' => 'io', 'label' => __('provisioning.io'), 'value' => $config->io, 'type' => 'number'])
     </div>
     <div class="col-span-2">
-        @include("admin/shared/search-select-multiple", ['name' => 'eggs[]', 'label' => __('provisioning.eggs'), 'options' => $eggs, 'value' => $currenteggs, 'multiple' => true])
+        @include("admin/shared/search-select-multiple", ['name' => 'eggs[]', 'label' => __('provisioning.eggs'), 'options' => $eggs, 'value' => $currenteggs, 'multiple' => true, 'help' => __('provisioning.eggs_help')])
 
         @if ($errors->has('eggs'))
             <p class="text-red-500 text-xs italic mt-2">
