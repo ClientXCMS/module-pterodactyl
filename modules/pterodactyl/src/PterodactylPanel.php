@@ -52,7 +52,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
 
                 return '';
             }
-            $serverResult = PterodactylServerDTO::getServerFromExternalId($service);
+            $serverResult = \App\Modules\Pterodactyl\DTO\PterodactylServerDTO::getServerFromExternalId($service);
             if (! $serverResult->installed()) {
                 \Session::flash('info', __('client.alerts.servernotinstalled'));
 
@@ -66,6 +66,27 @@ class PterodactylPanel extends AbstractPanelProvisioning
             $data['server'] = $serverResult;
             $data['href'] = $serverResult->getServerUrl($service->server);
             $data['utilization'] = $serverResult->getUtilization($service->server);
+
+            // Ajout de la récupération des eggs pour le select
+            $config = \App\Modules\Pterodactyl\Models\PterodactylConfig::where('product_id', $service->product_id)->first();
+            $eggs = [];
+            if ($config && isset($config->eggs)) {
+                $eggsArray = is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true);
+                if (is_array($eggsArray)) {
+                    foreach ($eggsArray as $eggNest) {
+                        [$eggId, $nestId] = explode(\App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER, $eggNest);
+                        $server = $service->server;
+                        $eggResponse = \App\Modules\Pterodactyl\Http::callApi($server, "nests/$nestId/eggs/$eggId");
+                        if ($eggResponse->status() == 200 && isset($eggResponse->toJson()->attributes->name)) {
+                            $eggName = $eggResponse->toJson()->attributes->name;
+                            $eggs[$eggId] = $eggName;
+                        } else {
+                            $eggs[$eggId] = $eggId;
+                        }
+                    }
+                }
+            }
+            $data['eggs'] = $eggs;
         } catch (ExternalApiException $e) {
             logger()->error($e->getMessage());
             if (in_array('*', $permissions)) {
