@@ -1,0 +1,13 @@
+{
+    "name": "Pterodactyl",
+    "description": "This is a new extension.",
+    "uuid": "pterodactyl",
+    "version": "1.0",
+    "author": {
+        "name": "MartinDev",
+        "email": "martindev@clientxcms.com"
+    },
+    "providers": [
+        "App\\Modules\\Pterodactyl\\PterodactylServiceProvider"
+    ]
+}

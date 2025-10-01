@@ -13,6 +13,7 @@ use App\Abstracts\AbstractServerType;
 use App\Contracts\Provisioning\ImportServiceInterface;
 use App\Contracts\Provisioning\ServerTypeInterface;
 use App\DTO\Provisioning\ServiceStateChangeDTO;
+use App\Events\GameHostingChangedEvent;
 use App\Exceptions\ProductConfigNotFoundException;
 use App\Exceptions\ServiceDeliveryException;
 use App\Models\Account\Customer;
@@ -144,6 +145,9 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
         $server = PterodactylServerDTO::getServerFromExternalId($service);
         $serverResult = $server->delete($service);
         if ($serverResult->successful()) {
+            if (array_key_exists('domain_subdomain', $service->data) && app('extension')->extensionIsEnabled('cloudflaresubdomains')) {
+                event(new GameHostingChangedEvent($service, 'expired', $service->data['domain_subdomain']));
+            }
             return new ServiceStateChangeDTO($service, true, 'Server terminated');
         }
 
@@ -204,12 +208,17 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
         $serverResult = Http::callApi($server, 'servers', $config->toRequest($service, $dto), 'POST');
         if ($serverResult->successful(true)) {
             $serverId = $serverResult->toJson()->attributes->id;
-            $data = ['server_id' => $serverId];
+            $data = ['server_id' => $serverId, 'domain_subdomain' => $data['domain_subdomain'] ?? null];
+            if ($data['domain_subdomain'] == null) {
+                unset($data['domain_subdomain']);
+            }
             $service->data = $data;
             $service->save();
             $server = PterodactylServerDTO::getServerFromExternalId($service);
             $this->sendEmail($service, $server, $userAccount);
-
+            if (array_key_exists('domain_subdomain', $service->data) && app('extension')->extensionIsEnabled('cloudflaresubdomains')) {
+                event(new GameHostingChangedEvent($service, 'created', $data['domain_subdomain']));
+            }
             return new ServiceStateChangeDTO($service, true, 'Server created');
         }
         if ($serverResult->isExternalIdAlreadyUsed()) {

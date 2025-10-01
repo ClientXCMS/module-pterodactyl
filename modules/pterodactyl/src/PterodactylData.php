@@ -11,8 +11,12 @@ namespace App\Modules\Pterodactyl;
 
 use App\DTO\Store\ProductDataDTO;
 use App\Models\Provisioning\Server;
+use App\Models\Provisioning\SubdomainHost;
 use App\Modules\Pterodactyl\Models\PterodactylConfig;
+use App\Rules\DomainIsNotRegisted;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\RequiredIf;
 
 class PterodactylData extends \App\Abstracts\AbstractProductData
 {
@@ -60,7 +64,11 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
         $data['eggnames'] = $eggs['eggnames'];
         $data['eggname'] = $productDataDTO->data['eggname'] ?? $eggs['defaultEgg'];
-
+        if (app('extension')->extensionIsEnabled('cloudflaresubdomains')){
+            $data['subdomains'] = SubdomainHost::getItemsByMetadata("cloudflare_zone_id");
+        } else {
+            $data['subdomains'] = collect();
+        }
         return view($this->namespace.'::product-data', $data)->render();
     }
 
@@ -73,7 +81,18 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function validate(): array
     {
-        return ['eggname' => ['string']];
+        if (!app('extension')->extensionIsEnabled('cloudflaresubdomains') || SubdomainHost::count() == 0) {
+            return ['eggname' => ['string']];
+        }
+        return [
+            'eggname' => ['string'],
+            'domain_subdomain' => ['nullable', 'string', 'max:255', new DomainIsNotRegisted(true), new RequiredIf(function () {
+                return request()->input('domain') == null && SubdomainHost::count() > 0;
+            })],
+            'subdomain' => ['nullable', 'string', 'max:255', Rule::in(SubdomainHost::all()->pluck('domain')->toArray()), new RequiredIf(function () {
+                return request()->input('domain') == null && SubdomainHost::count() > 0;
+            })],
+        ];
     }
 
     public function parameters(ProductDataDTO $productDataDTO): array
@@ -105,11 +124,16 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
             $eggs = $config->eggs;
             [$egg, $nest] = $this->getEgg($eggs, $eggname, $config->server_id);
         }
-
+        if (request()->input('domain_subdomain') != null) {
+            $domain = strtolower(request()->input('domain_subdomain') . request()->input('subdomain'));
+        } else {
+            $domain = null;
+        }
         return [
             'eggId' => $egg,
             'nestId' => $nest,
             'eggname' => $eggname,
+            'domain_subdomain' => $domain,
         ];
     }
 

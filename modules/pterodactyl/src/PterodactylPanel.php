@@ -15,7 +15,6 @@ use App\Exceptions\ExternalApiException;
 use App\Models\Provisioning\Service;
 use App\Modules\Pterodactyl\DTO\PterodactylServerDTO;
 use Illuminate\Http\RedirectResponse;
-use MongoDB\Driver\Session;
 
 class PterodactylPanel extends AbstractPanelProvisioning
 {
@@ -78,7 +77,6 @@ class PterodactylPanel extends AbstractPanelProvisioning
         }
         $data['uuid'] = $this->uuid;
         $data['offline'] = $this->offline;
-
         return view($service->type.'::panel/index', $data);
     }
 
@@ -90,7 +88,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
     public function renderConnect(Service $service)
     {
         $serverResult = PterodactylServerDTO::getServerFromExternalId($service);
-
-        return new RedirectResponse($serverResult->getServerUrl($service->server));
+        $redirect = $serverResult->autologin($service->server);
+        return new RedirectResponse($redirect);
     }
 }

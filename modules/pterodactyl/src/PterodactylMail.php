@@ -48,7 +48,7 @@ class PterodactylMail extends Notification implements ShouldQueue
             'username' => $this->username,
             'password' => $this->password,
             'panel_url' => $this->panel_url,
-            'can_reset_password' => $this->password !== _('global.already_set'),
+            'can_reset_password' => $this->password !== __('global.already_set'),
             'reset_password_url' => $this->panel_url.'/auth/password',
         ];
 

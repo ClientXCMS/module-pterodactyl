@@ -222,6 +222,57 @@ class PterodactylServerDTO
         return '';
     }
 
+    public function setAlias(string $alias, Server $server)
+    {
+        if (property_exists($this->attributes->relationships->allocations, 'data')) {
+            $allocation = collect($this->attributes->relationships->allocations->data)->first();
+            if ($allocation) {
+                $allocationId = $allocation->attributes->id;
+                $response = Http::callApi($server, "allocations/{$allocationId}/ip-alias", [
+                    'ip_alias' => $alias,
+                ], 'PATCH');
+            }
+        }
+    }
+
+    public function autologin(Server $server)
+    {
+        $ssoKey = $this->getSsoKey($server);
+        if (empty($ssoKey)) {
+            return $this->getServerUrl($server);
+        }
+        $response = \Http::get("https://" . $server->hostname . '/sso-clientxcms', [
+            'sso_secret' => $ssoKey,
+            'user_id' => $this->attributes->user,
+        ]);
+        if ($response->successful()) {
+            $data = $response->json();
+            if (isset($data['redirect'])) {
+                return $data['redirect'] . '?redirect=' . urlencode('/server/' . $this->identifier);
+            }
+        } else {
+            $response = $response->json();
+            $message = $response['success'] && !$response['success']
+                ? $response['message']
+                : 'Something went wrong, please contact an administrator.';
+
+            return redirect()->back()->withError($message);
+        }
+        return $this->getServerUrl($server);
+    }
+
+    private function getSsoKey(Server $server)
+    {
+        $ssoKey = getenv('SSO_CLIENTXCMS_KEY' . $server->id);
+        if (empty($ssoKey)) {
+            $ssoKey = $server->hasMetadata('sso_key') ? $server->getMetadata('sso_key') : null;
+            if ($ssoKey){
+                return $ssoKey;
+            }
+        }
+        return $ssoKey;
+    }
+
     public function isStarted(\stdClass $utilization): bool
     {
         $state = $utilization->current_state ?? $utilization->status ?? 'offline';

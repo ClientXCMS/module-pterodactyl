@@ -1,0 +1,19 @@
+{
+    "pterodactyl": {
+        "fr_FR": {
+            "subject": "Votre serveur est prêt",
+            "button": "Connexion au panel",
+            "body": "Votre serveur est prêt à être utilisé. Vous pouvez vous connecter à votre serveur en utilisant les informations ci-dessous.<br/>\n <br/><strong>Adresse IP</strong> : {{ $ip }} <br/>\n<br/>\n<strong>Mot de passe</strong> : {{ $password }} <br/>\n<strong>Utilisateur</strong> : {{ $username }} <br/>\n<strong>Connexion</strong> : <a href=\"{{ $panel_url }}\">{{ $panel_url }}</a> @if ($can_reset_password) Vous pouvez demander une réinitialisation de mot de passe en cliquant sur le lien suivant : <a href=\"{{ $reset_password_url }}\">Réinitialiser le mot de passe</a> @endif"
+        },
+        "en_GB": {
+            "subject": "Your server is ready",
+            "button": "Panel login",
+            "body": "Your server is ready to be used. You can connect to your server using the information below. <br/>\n<strong>IP Address</strong> : {{ $ip }} <br/>\n<br/>\n<strong>Password</strong> : {{ $password }} <br/>\n<strong>User</strong> : {{ $username }} <br/>\n<strong>Login</strong> : <a href=\"{{ $panel_url }}\">{{ $panel_url }}</a> @if ($can_reset_password) You can request a password reset by clicking on the following link : <a href=\"{{ $reset_password_url }}\">Reset password</a> @endif"
+        },
+        "es_ES": {
+            "subject": "Su servidor está listo",
+            "button": "Inicio de sesión en el panel",
+            "body": "Su servidor está listo para ser utilizado. Puede conectarse a su servidor utilizando la información a continuación. <br/>\n<strong>Dirección IP</strong> : {{ $ip }} <br/>\n<br/>\n<strong>Contraseña</strong> : {{ $password }} <br/>\n<strong>Usuario</strong> : {{ $username }} <br/>\n<strong>Conexión</strong> : <a href=\"{{ $panel_url }}\">{{ $panel_url }}</a> @if ($can_reset_password) Puede solicitar un restablecimiento de contraseña haciendo clic en el siguiente enlace: <a href=\"{{ $reset_password_url }}\">Restablecer contraseña</a> @endif"
+        }
+    }
+}
