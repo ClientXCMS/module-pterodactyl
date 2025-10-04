@@ -30,10 +30,10 @@ class Http
         }
         $ip = $server->hostname;
         $url = $ip;
-        if (! str_starts_with('https', $ip) && ! str_starts_with('http', $ip)) {
+        if (! str_starts_with($ip, 'http') && ! str_starts_with($ip, 'https')) {
             $url = ($server->port == 443 ? 'https' : 'http').'://'.$url;
         }
-
+        
         $url .= "/api/$type/".$endpoint;
         try {
             $response = \Illuminate\Support\Facades\Http::withHeaders([
