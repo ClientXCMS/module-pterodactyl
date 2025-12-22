@@ -17,7 +17,7 @@ trait PterodactylConfigTrait
 {
     private function fetchEggs()
     {
-        return Cache::rememberForever('pterodactyl_eggs', function () {
+        return Cache::remember('pterodactyl_eggs', now()->addMinutes(10), function () {
             $tmp = [];
             foreach ($this->servers as $server) {
                 $response = Http::callApi($server, 'nests')->toJson();
@@ -68,7 +68,7 @@ trait PterodactylConfigTrait
 
     private function fetchLocations(): array
     {
-        return Cache::rememberForever('pterodactyl_locations', function () {
+        return Cache::remember('pterodactyl_locations', now()->addMinutes(10), function () {
             return collect($this->servers)->mapWithKeys(function (Server $server) {
                 $response = Http::callApi($server, 'locations')->toJson();
                 if ($response == null) {
