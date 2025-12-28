@@ -114,7 +114,7 @@ class PterodactylAccountDTO
     public static function getUserAccount(Customer $customer, Server $server, Service $service, bool $resetPassword = false): PterodactylAccountDTO
     {
         $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'users?per_page='.$perPage);
+        $initial = Http::callApi($server, 'users?filter[email]='.$customer->email.'&per_page='.$perPage);
         $userData = $initial->toJson()->data;
         $result = null;
         // Check if user is on the first page
