@@ -95,8 +95,7 @@ class PterodactylConfig extends AbstractConfig
     {
         $parameters['eggs'] = json_encode($parameters['eggs']);
         $this->model::where('product_id', $product->id)->update($parameters);
-        Cache::delete($this->type.'_parameters_'.$product->id);
-        Cache::delete($this->type.'_render_'.$product->id);
+        Cache::delete($this->type.'_http_'.$product->id);
         Cache::delete($this->type.'_eggs_'.$product->id);
     }
 }
