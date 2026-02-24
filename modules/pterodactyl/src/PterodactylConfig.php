@@ -93,9 +93,34 @@ class PterodactylConfig extends AbstractConfig
 
     public function updateConfig(Product $product, array $parameters)
     {
+        $this->clearEggCache($product);
+
         $parameters['eggs'] = json_encode($parameters['eggs']);
         $this->model::where('product_id', $product->id)->update($parameters);
-        Cache::delete($this->type.'_http_'.$product->id);
-        Cache::delete($this->type.'_eggs_'.$product->id);
+    }
+
+    /**
+     * Clear all pterodactyl cache keys for a given product:
+     * - pterodactyl_http_{productId}   (egg names for frontend render)
+     * - pterodactyl_eggs_{productId}   (egg list for multi-egg products)
+     * - pterodactyl_egg_{serverId}_{eggName} (egg ID/nest mapping per name)
+     */
+    private function clearEggCache(Product $product): void
+    {
+        $prefix = $this->type;
+        $config = $this->model::where('product_id', $product->id)->first();
+
+        // Invalidate per-egg-name mapping keys before clearing the eggs list
+        if ($config !== null && $config->server_id !== null) {
+            $cachedEggs = Cache::get("{$prefix}_eggs_{$product->id}");
+            if (is_array($cachedEggs)) {
+                foreach (array_keys($cachedEggs) as $eggName) {
+                    Cache::forget("{$prefix}_egg_{$config->server_id}_{$eggName}");
+                }
+            }
+        }
+
+        Cache::forget("{$prefix}_http_{$product->id}");
+        Cache::forget("{$prefix}_eggs_{$product->id}");
     }
 }
