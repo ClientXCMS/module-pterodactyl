@@ -190,12 +190,7 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
         $data = $service->data;
         $user = $service->customer;
         $server = $service->server;
-        // prévoir si l'utilisateur a déjà un compte pterodactyl crée au avant la commande actuel
-        $resetPassword = true;
-        if (Service::where('type', $this->uuid)->where('customer_id', $user->id)->where('server_id', $server->id)->count() > 0) {
-            $resetPassword = false;
-        }
-        $userAccount = PterodactylAccountDTO::getUserAccount($user, $server, $service, $resetPassword);
+        $userAccount = PterodactylAccountDTO::getUserAccount($user, $server, $service);
         $eggs = $config->eggs;
         if (count($eggs) == 1 || ! array_key_exists('nestId', $data)) {
             $first = current($eggs);

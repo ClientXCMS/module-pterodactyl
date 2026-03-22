@@ -111,7 +111,7 @@ class PterodactylAccountDTO
         return $this;
     }
 
-    public static function getUserAccount(Customer $customer, Server $server, Service $service, bool $resetPassword = false): PterodactylAccountDTO
+    public static function getUserAccount(Customer $customer, Server $server, Service $service): PterodactylAccountDTO
     {
         $perPage = PterodactylAccountDTO::PER_PAGE;
         $initial = Http::callApi($server, 'users?filter[email]='.$customer->email.'&per_page='.$perPage);
@@ -139,13 +139,10 @@ class PterodactylAccountDTO
             }
         }
         if ($result != null) {
-            if ($resetPassword) {
-                $servers = PterodactylServerDTO::getServersUser(new PterodactylAccountDTO($result), $server);
-                if (count($servers) == 0 && ! $result->root_admin) {
-                    return (new PterodactylAccountDTO($result, false, null))->resetPassword($server, $service);
-                }
+            $servers = PterodactylServerDTO::getServersUser(new PterodactylAccountDTO($result), $server);
+            if (count($servers) == 0 && ! $result->root_admin) {
+                return (new PterodactylAccountDTO($result, false, null))->resetPassword($server, $service);
             }
-
             return new PterodactylAccountDTO($result);
         }
 
