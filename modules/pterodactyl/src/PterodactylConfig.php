@@ -47,15 +47,18 @@ class PterodactylConfig extends AbstractConfig
 
     public function render(Product $product)
     {
+        $config = $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig);
+        // Utiliser fetchEggs pour récupérer les noms réels des eggs
+        $eggs = $this->fetchEggs();
         $context = [
             'locations' => $this->fetchLocations(),
-            'eggs' => $this->fetchEggs(),
+            'eggs' => $eggs,
             'delimiter' => \App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER,
             'servers' => $this->fetchServers(),
             'product' => $product,
-            'config' => $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig),
+            'config' => $config,
         ];
-        $context['currenteggs'] = $context['config']->eggs ?? [];
+        $context['currenteggs'] = $config ? (is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true)) : [];
 
         return view($this->type.'_admin::product-config', $context);
     }

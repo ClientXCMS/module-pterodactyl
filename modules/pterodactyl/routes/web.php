@@ -16,4 +16,6 @@ Route::name('pterodactyl')
         \Route::post('/power/{service}/{power}', [PterodactylController::class, 'power'])
             ->name('power')
             ->where('power', 'start|stop|restart');
+            \Route::post('/change-egg/{service}', [PterodactylController::class, 'changeEgg'])
+                ->name('changeEgg');
     });
