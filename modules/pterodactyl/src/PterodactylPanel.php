@@ -36,6 +36,13 @@ class PterodactylPanel extends AbstractPanelProvisioning
                 'newwindow' => true,
                 'active' => true,
             ]),
+            new ProvisioningTabDTO([
+                'title' => __('pterodactyl::panel.reinstall'),
+                'permission' => $this->uuid.'.panel.reinstall',
+                'icon' => '<i class="bi bi-arrow-clockwise"></i>',
+                'uuid' => 'reinstall',
+                'active' => true,
+            ]),
         ];
     }
 
@@ -78,6 +85,64 @@ class PterodactylPanel extends AbstractPanelProvisioning
         $data['uuid'] = $this->uuid;
         $data['offline'] = $this->offline;
         return view($service->type.'::panel/index', $data);
+    }
+
+    public function renderReinstall(Service $service)
+    {
+        $data = [
+            'service' => $service,
+            'permissions' => ['*'],
+        ];
+        try {
+            if (! $service->server) {
+                \Session::flash('error', __('client.alerts.servernotfound'));
+
+                return '';
+            }
+            $serverResult = PterodactylServerDTO::getServerFromExternalId($service);
+            if (! $serverResult->installed()) {
+                \Session::flash('info', __('client.alerts.servernotinstalled'));
+
+                return '';
+            }
+            if ($serverResult->suspended()) {
+                \Session::flash('error', __('client.alerts.service_suspended'));
+
+                return '';
+            }
+            $config = \App\Modules\Pterodactyl\Models\PterodactylConfig::where('product_id', $service->product_id)->first();
+            $data['server'] = $serverResult;
+            $eggs = [];
+            if ($config && isset($config->eggs)) {
+                $eggsArray = is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true);
+                if (is_array($eggsArray)) {
+                    foreach ($eggsArray as $eggNest) {
+                        [$eggId, $nestId] = explode(\App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER, $eggNest);
+                        $server = $service->server;
+                        $eggResponse = \App\Modules\Pterodactyl\Http::callApi($server, "nests/$nestId/eggs/$eggId");
+                        if ($eggResponse->status() == 200 && isset($eggResponse->toJson()->attributes->name)) {
+                            $eggName = $eggResponse->toJson()->attributes->name;
+                            $eggs[$eggId] = $eggName;
+                        } else {
+                            $eggs[$eggId] = $eggId;
+                        }
+                    }
+                }
+            }
+            $data['eggs'] = $eggs;
+        } catch (ExternalApiException $e) {
+            logger()->error($e->getMessage());
+            if (in_array('*', $permissions)) {
+                \Session::flash('error', $e->getMessage());
+            } else {
+                \Session::flash('error', __('client.alerts.internalerror'));
+            }
+
+            return '';
+        }
+        $data['uuid'] = $this->uuid;
+        $data['offline'] = $this->offline;
+        return view($service->type.'::panel/reinstall', $data);
     }
 
     public function renderAdmin(Service $service)

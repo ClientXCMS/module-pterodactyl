@@ -47,16 +47,17 @@ class PterodactylConfig extends AbstractConfig
 
     public function render(Product $product)
     {
+        $config = $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig);
         $context = [
             'locations' => $this->fetchLocations(),
             'eggs' => $this->fetchEggs(),
             'delimiter' => \App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER,
             'servers' => $this->fetchServers(),
             'product' => $product,
-            'config' => $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig),
+            'config' => $config,
         ];
-        $context['currenteggs'] = $context['config']->eggs ?? [];
 
+        $context['currenteggs'] = $config ? (is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true)) : [];
         return view($this->type.'_admin::product-config', $context);
     }
 
@@ -99,18 +100,11 @@ class PterodactylConfig extends AbstractConfig
         $this->model::where('product_id', $product->id)->update($parameters);
     }
 
-    /**
-     * Clear all pterodactyl cache keys for a given product:
-     * - pterodactyl_http_{productId}   (egg names for frontend render)
-     * - pterodactyl_eggs_{productId}   (egg list for multi-egg products)
-     * - pterodactyl_egg_{serverId}_{eggName} (egg ID/nest mapping per name)
-     */
     private function clearEggCache(Product $product): void
     {
         $prefix = $this->type;
         $config = $this->model::where('product_id', $product->id)->first();
 
-        // Invalidate per-egg-name mapping keys before clearing the eggs list
         if ($config !== null && $config->server_id !== null) {
             $cachedEggs = Cache::get("{$prefix}_eggs_{$product->id}");
             if (is_array($cachedEggs)) {
