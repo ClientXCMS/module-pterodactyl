@@ -64,7 +64,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
         $data['eggnames'] = $eggs['eggnames'];
         $data['eggname'] = $productDataDTO->data['eggname'] ?? $eggs['defaultEgg'];
-        if (app('extension')->extensionIsEnabled('cloudflaresubdomains') && !$productDataDTO->product->hasMetadata('disable_subdomain')){
+        if (app('extension')->extensionIsEnabled('cloudflaresubdomains')){
             $data['subdomains'] = SubdomainHost::getItemsByMetadata("cloudflare_zone_id");
         } else {
             $data['subdomains'] = collect();
@@ -81,7 +81,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function validate(): array
     {
-        if (!app('extension')->extensionIsEnabled('cloudflaresubdomains') || SubdomainHost::count() == 0 || $productDataDTO->product->hasMetadata('disable_subdomain')) {
+        if (!app('extension')->extensionIsEnabled('cloudflaresubdomains') || SubdomainHost::count() == 0) {
             return ['eggname' => ['string']];
         }
         return [
