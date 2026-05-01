@@ -31,7 +31,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function render(ProductDataDTO $productDataDTO)
     {
-        if ($productDataDTO->product == null) {
+        if ($productDataDTO->product == null || $productDataDTO->product->id == null) {
             return 'Product not found';
         }
         $config = $this->getConfig($productDataDTO->product->id);
@@ -123,12 +123,19 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
         } else {
             $eggs = $config->eggs;
             [$egg, $nest] = $this->getEgg($eggs, $eggname, $config->server_id);
+
+            if ($egg == null || $nest == null) {
+                return [
+                    'error' => 'Please clear cache in extension page'
+                ];
+            }
         }
         if (request()->input('domain_subdomain') != null) {
             $domain = strtolower(request()->input('domain_subdomain') . request()->input('subdomain'));
         } else {
             $domain = null;
         }
+        
         return [
             'eggId' => $egg,
             'nestId' => $nest,
