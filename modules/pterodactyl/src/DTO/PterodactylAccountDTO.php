@@ -39,7 +39,7 @@ class PterodactylAccountDTO
 
     public function __construct(\stdClass $attributes, bool $wasCreated = false, ?string $password = null)
     {
-        $this->id = $attributes->id;
+        $this->id = (int) $attributes->id;
         $this->external_id = $attributes->external_id;
         $this->firstname = $attributes->first_name;
         $this->lastname = $attributes->last_name;
