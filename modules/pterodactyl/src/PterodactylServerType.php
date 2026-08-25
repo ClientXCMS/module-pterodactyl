@@ -188,6 +188,9 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             return new ServiceStateChangeDTO($service, false, 'No server found for service ' . $service->id);
         }
         $data = $service->data;
+        if ($data == null) {
+            return new ServiceStateChangeDTO($service, false, 'Pterodactyl Data is null for service ' . $service->id);
+        }
         $user = $service->customer;
         $server = $service->server;
         $userAccount = PterodactylAccountDTO::getUserAccount($user, $server, $service);
