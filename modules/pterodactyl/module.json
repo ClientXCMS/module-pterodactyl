@@ -4,8 +4,8 @@
     "uuid": "pterodactyl",
     "version": "1.4",
     "author": {
-        "name": "MartinDev",
-        "email": "martindev@clientxcms.com"
+        "name": "CLIENTXCMS",
+        "email": "contact@clientxcms.com"
     },
     "providers": [
         "App\\Modules\\Pterodactyl\\PterodactylServiceProvider"
