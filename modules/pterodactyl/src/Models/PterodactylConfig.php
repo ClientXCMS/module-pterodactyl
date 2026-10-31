@@ -18,8 +18,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * 
- *
  * @property int $id
  * @property int $product_id
  * @property float $memory
@@ -45,6 +43,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read Product $product
  * @property-read Server $server
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig query()
@@ -71,6 +70,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereStartup($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereSwap($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class PterodactylConfig extends Model

@@ -64,11 +64,12 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
         $data['eggnames'] = $eggs['eggnames'];
         $data['eggname'] = $productDataDTO->data['eggname'] ?? $eggs['defaultEgg'];
-        if (app('extension')->extensionIsEnabled('cloudflaresubdomains')){
-            $data['subdomains'] = SubdomainHost::getItemsByMetadata("cloudflare_zone_id");
+        if (app('extension')->extensionIsEnabled('cloudflaresubdomains')) {
+            $data['subdomains'] = SubdomainHost::getItemsByMetadata('cloudflare_zone_id');
         } else {
             $data['subdomains'] = collect();
         }
+
         return view($this->namespace.'::product-data', $data)->render();
     }
 
@@ -81,9 +82,10 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function validate(): array
     {
-        if (!app('extension')->extensionIsEnabled('cloudflaresubdomains') || SubdomainHost::count() == 0) {
+        if (! app('extension')->extensionIsEnabled('cloudflaresubdomains') || SubdomainHost::count() == 0) {
             return ['eggname' => ['string']];
         }
+
         return [
             'eggname' => ['string'],
             'domain_subdomain' => ['nullable', 'string', 'max:255', new DomainIsNotRegisted(true), new RequiredIf(function () {
@@ -126,16 +128,16 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
             if ($egg == null || $nest == null) {
                 return [
-                    'error' => 'Please clear cache in extension page'
+                    'error' => 'Please clear cache in extension page',
                 ];
             }
         }
         if (request()->input('domain_subdomain') != null) {
-            $domain = strtolower(request()->input('domain_subdomain') . request()->input('subdomain'));
+            $domain = strtolower(request()->input('domain_subdomain').request()->input('subdomain'));
         } else {
             $domain = null;
         }
-        
+
         return [
             'eggId' => $egg,
             'nestId' => $nest,
@@ -156,7 +158,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
                     $response = $response->toJson();
                     $eggs[$response->attributes->name] = $response->attributes->name;
                 } else {
-                    //throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
+                    // throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
                 }
             }
 
@@ -178,7 +180,7 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
                         return [$egg, $nest];
                     }
                 } else {
-                    //throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
+                    // throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
                 }
             }
 

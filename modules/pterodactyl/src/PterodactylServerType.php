@@ -41,10 +41,10 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     public function suspendAccount(Service $service): ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot suspend account');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot suspend account');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, true, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, true, 'No server found for service '.$service->id);
         }
         try {
             $server = PterodactylServerDTO::getServerFromExternalId($service);
@@ -57,7 +57,7 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             return new ServiceStateChangeDTO($service, true, 'Server suspended');
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while suspending server : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while suspending server : '.$serverResult->formattedErrors());
     }
 
     public function testConnection(array $params): \App\DTO\Provisioning\ConnectionResponse
@@ -81,16 +81,16 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             $serversValid = $status == 200;
             $errorMessages = [];
             if (! $locationsValid) {
-                $errorMessages[] = 'Invalid "locations" Permissions Statut :' . $locationsResponse->status();
+                $errorMessages[] = 'Invalid "locations" Permissions Statut :'.$locationsResponse->status();
             }
             if (! $nestsValid) {
-                $errorMessages[] = 'Invalid "nests" Permissions Statut :' . $nestsResponse->status();
+                $errorMessages[] = 'Invalid "nests" Permissions Statut :'.$nestsResponse->status();
             }
             if (! $clientValid) {
-                $errorMessages[] = 'Invalid "client" Permissions Statut :' . $clientResponse->status();
+                $errorMessages[] = 'Invalid "client" Permissions Statut :'.$clientResponse->status();
             }
             if (! $serversValid) {
-                $errorMessages[] = 'Invalid "servers" Permissions Statut :' . $status;
+                $errorMessages[] = 'Invalid "servers" Permissions Statut :'.$status;
             }
 
             if (count($errorMessages) > 0) {
@@ -118,10 +118,10 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     public function unsuspendAccount(Service $service): ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot unsuspend account');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot unsuspend account');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, true, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, true, 'No server found for service '.$service->id);
         }
         $server = PterodactylServerDTO::getServerFromExternalId($service);
         $serverResult = $server->unsuspend($service);
@@ -129,7 +129,7 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             return new ServiceStateChangeDTO($service, true, 'Server unsuspended');
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while unsuspecting server : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while unsuspecting server : '.$serverResult->formattedErrors());
     }
 
     /**
@@ -138,10 +138,10 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     public function expireAccount(Service $service): ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot terminate account');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot terminate account');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, true, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, true, 'No server found for service '.$service->id);
         }
         $server = PterodactylServerDTO::getServerFromExternalId($service);
         $serverResult = $server->delete($service);
@@ -149,10 +149,11 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             if (array_key_exists('domain_subdomain', $service->data) && app('extension')->extensionIsEnabled('cloudflaresubdomains')) {
                 event(new GameHostingChangedEvent($service, 'expired', $service->data['domain_subdomain']));
             }
+
             return new ServiceStateChangeDTO($service, true, 'Server terminated');
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while terminating server : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while terminating server : '.$serverResult->formattedErrors());
     }
 
     /**
@@ -162,7 +163,7 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     {
         $config = self::getConfigClass($product)::where('product_id', $product->id)->first();
         if ($config == null) {
-            throw new ProductConfigNotFoundException('No ' . $this->uuid . ' config found for product ' . $product->name);
+            throw new ProductConfigNotFoundException('No '.$this->uuid.' config found for product '.$product->name);
         }
 
         return Server::find($config->server_id);
@@ -171,25 +172,25 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     public function createAccount(Service $service): ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot create account');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot create account');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, false, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, false, 'No server found for service '.$service->id);
         }
         if ($service->product == null) {
-            return new ServiceStateChangeDTO($service, false, 'No product found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, false, 'No product found for service '.$service->id);
         }
         /** @var PterodactylConfig|null $config */
         $config = self::getConfigClass($service->product)::where('product_id', $service->product_id)->first();
         if ($config == null) {
-            return new ServiceStateChangeDTO($service, false, 'No config found for product ' . $service->product_id);
+            return new ServiceStateChangeDTO($service, false, 'No config found for product '.$service->product_id);
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, false, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, false, 'No server found for service '.$service->id);
         }
         $data = $service->data;
         if ($data == null) {
-            return new ServiceStateChangeDTO($service, false, 'Pterodactyl Data is null for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, false, 'Pterodactyl Data is null for service '.$service->id);
         }
         $user = $service->customer;
         $server = $service->server;
@@ -218,6 +219,7 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             if (array_key_exists('domain_subdomain', $service->data) && app('extension')->extensionIsEnabled('cloudflaresubdomains')) {
                 event(new GameHostingChangedEvent($service, 'created', $data['domain_subdomain']));
             }
+
             return new ServiceStateChangeDTO($service, true, 'Server created');
         }
         if ($serverResult->isExternalIdAlreadyUsed()) {
@@ -226,21 +228,21 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
         }
         if (in_array($serverResult->status(), [422, 400]) && str_contains($serverResult->formattedErrors(), 'for automatic deployment')) {
             $diagnostic = NodeAllocationDiagnosticDTO::analyze($server, $config, $service);
-            $errorMessage = "Automatic allocation error on node.\n" . $diagnostic->getSummary();
+            $errorMessage = "Automatic allocation error on node.\n".$diagnostic->getSummary();
 
             return new ServiceStateChangeDTO($service, false, $errorMessage);
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while creating server : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while creating server : '.$serverResult->formattedErrors());
     }
 
     public function changeCustomer(Service $service, Customer $customer): ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot change customer');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot change customer');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, true, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, true, 'No server found for service '.$service->id);
         }
         $server = PterodactylServerDTO::getServerFromExternalId($service);
         $serverResult = $server->changeOwner($service, $customer);
@@ -248,35 +250,35 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             return new ServiceStateChangeDTO($service, true, 'Server owner changed');
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while changing server owner : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while changing server owner : '.$serverResult->formattedErrors());
     }
 
     public function upgradeService(Service $service, Product $product): ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot upgrade account');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot upgrade account');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, true, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, true, 'No server found for service '.$service->id);
         }
         $server = PterodactylServerDTO::getServerFromExternalId($service);
         $config = self::getConfigClass($product)::where('product_id', $product->id)->first();
         if ($config == null) {
-            return new ServiceStateChangeDTO($service, false, 'No config found for product ' . $product->id);
+            return new ServiceStateChangeDTO($service, false, 'No config found for product '.$product->id);
         }
         $serverResult = $server->upgrade($service, $config);
         if ($serverResult->successful(true)) {
             return new ServiceStateChangeDTO($service, true, 'Server upgraded');
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while upgrading server : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while upgrading server : '.$serverResult->formattedErrors());
     }
 
     protected function getEnvFromNest(int $eggId, int $nestId, Server $server, Service $service)
     {
-        $eggResult = Http::callApi($server, 'nests/' . $nestId . '/eggs/' . $eggId . '?include=variables');
+        $eggResult = Http::callApi($server, 'nests/'.$nestId.'/eggs/'.$eggId.'?include=variables');
         if (! $eggResult->successful(true)) {
-            throw new ServiceDeliveryException('Error while getting egg : ' . json_encode($eggResult->toJson()), $service, $eggResult->status());
+            throw new ServiceDeliveryException('Error while getting egg : '.json_encode($eggResult->toJson()), $service, $eggResult->status());
         }
         $environment = [];
         foreach ($eggResult->toJson()->attributes->relationships->variables->data as $key => $val) {
@@ -302,10 +304,10 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     public function onRenew(Service $service): \App\DTO\Provisioning\ServiceStateChangeDTO
     {
         if ($service->type != $this->uuid) {
-            return new ServiceStateChangeDTO($service, false, 'Service type' . $service->type . ' is not ' . $this->uuid . ', cannot renew account');
+            return new ServiceStateChangeDTO($service, false, 'Service type'.$service->type.' is not '.$this->uuid.', cannot renew account');
         }
         if ($service->server == null) {
-            return new ServiceStateChangeDTO($service, true, 'No server found for service ' . $service->id);
+            return new ServiceStateChangeDTO($service, true, 'No server found for service '.$service->id);
         }
         $server = PterodactylServerDTO::getServerFromExternalId($service);
         $serverResult = $server->changeDescription($service);
@@ -313,7 +315,7 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             return new ServiceStateChangeDTO($service, true, 'Server renewed');
         }
 
-        return new ServiceStateChangeDTO($service, false, 'Error while renewing server : ' . $serverResult->formattedErrors());
+        return new ServiceStateChangeDTO($service, false, 'Error while renewing server : '.$serverResult->formattedErrors());
     }
 
     protected function sendEmail(Service $service, PterodactylServerDTO $server, PterodactylAccountDTO $userAccount): void
@@ -350,8 +352,8 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             'additional_databases' => __('provisioning.admin.configoptions.keys.additional_databases'),
             'additional_allocations' => __('provisioning.admin.configoptions.keys.additional_allocations'),
             'additional_backups' => __('provisioning.admin.configoptions.keys.additional_backups'),
-            $this->uuid . '_location_id' => __($this->uuid . '::messages.optionstypes.location_id'),
-            $this->uuid . '_dedicated_ip' => __($this->uuid . '::messages.optionstypes.dedicated_ip'),
+            $this->uuid.'_location_id' => __($this->uuid.'::messages.optionstypes.location_id'),
+            $this->uuid.'_dedicated_ip' => __($this->uuid.'::messages.optionstypes.dedicated_ip'),
         ];
     }
 }

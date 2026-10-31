@@ -84,6 +84,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
         }
         $data['uuid'] = $this->uuid;
         $data['offline'] = $this->offline;
+
         return view($service->type.'::panel/index', $data);
     }
 
@@ -142,6 +143,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
         }
         $data['uuid'] = $this->uuid;
         $data['offline'] = $this->offline;
+
         return view($service->type.'::panel/reinstall', $data);
     }
 
@@ -154,6 +156,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
     {
         $serverResult = PterodactylServerDTO::getServerFromExternalId($service);
         $redirect = $serverResult->autologin($service->server);
+
         return new RedirectResponse($redirect);
     }
 }

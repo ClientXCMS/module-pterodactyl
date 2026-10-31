@@ -44,7 +44,6 @@ class PterodactylConfig extends AbstractConfig
         'eggs',
         'force_outgoing_ip',
     ];
-    
 
     public function render(Product $product)
     {
@@ -56,7 +55,7 @@ class PterodactylConfig extends AbstractConfig
             'servers' => $this->fetchServers(),
             'product' => $product,
             'config' => $config,
-            'currenteggs' => $context['config']->eggs ?? []
+            'currenteggs' => $context['config']->eggs ?? [],
         ];
 
         return view($this->type.'_admin::product-config', $context);

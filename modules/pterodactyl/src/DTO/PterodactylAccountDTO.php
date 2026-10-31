@@ -143,6 +143,7 @@ class PterodactylAccountDTO
             if (count($servers) == 0 && ! $result->root_admin) {
                 return (new PterodactylAccountDTO($result, false, null))->resetPassword($server, $service);
             }
+
             return new PterodactylAccountDTO($result);
         }
 

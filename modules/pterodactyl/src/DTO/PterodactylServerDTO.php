@@ -51,7 +51,7 @@ class PterodactylServerDTO
     public static function getAllServers(Server $server)
     {
         $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'servers?per_page=' . $perPage);
+        $initial = Http::callApi($server, 'servers?per_page='.$perPage);
         $results = [];
         if ($initial->toJson() == null) {
             return [];
@@ -101,7 +101,7 @@ class PterodactylServerDTO
 
     public function getUtilization(Server $server)
     {
-        $utilizationResult = Http::callApi($server, 'servers/' . $this->identifier . '/resources', [], 'GET', true, 'client');
+        $utilizationResult = Http::callApi($server, 'servers/'.$this->identifier.'/resources', [], 'GET', true, 'client');
         if (property_exists($utilizationResult->toJson(), 'errors')) {
             throw new ExternalApiException($utilizationResult->toJson()->errors[0]->detail);
         }
@@ -134,7 +134,7 @@ class PterodactylServerDTO
     public static function getServersUser(PterodactylAccountDTO $dto, Server $server): array
     {
         $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'servers?per_page=' . $perPage);
+        $initial = Http::callApi($server, 'servers?per_page='.$perPage);
         if (property_exists($initial->toJson(), 'errors')) {
             throw new ExternalApiException($initial->toJson()->errors[0]->detail);
         }
@@ -202,20 +202,20 @@ class PterodactylServerDTO
             'external_id' => (string) $service->id,
             'name' => $serverData->attributes->name,
             'user' => $user->id,
-            'description' => 'Exp: ' . $service->expires_at->format('d/m/y'),
+            'description' => 'Exp: '.$service->expires_at->format('d/m/y'),
         ];
         if (empty($serverData->attributes->description)) {
             unset($data['description']);
         }
 
-        return Http::callApi($server, 'servers/' . $serverId . '/details', $data, 'PATCH');
+        return Http::callApi($server, 'servers/'.$serverId.'/details', $data, 'PATCH');
     }
 
     public function getAddresses(): string
     {
         if (property_exists($this->attributes->relationships->allocations, 'data')) {
             return collect($this->attributes->relationships->allocations->data)->map(function ($data) {
-                return ($data->attributes->alias ?? $data->attributes->ip) . ':' . $data->attributes->port;
+                return ($data->attributes->alias ?? $data->attributes->ip).':'.$data->attributes->port;
             })->join(',');
         }
 
@@ -241,35 +241,37 @@ class PterodactylServerDTO
         if (empty($ssoKey)) {
             return $this->getServerUrl($server);
         }
-        $response = \Http::get("https://" . $server->hostname . '/sso-clientxcms', [
+        $response = \Http::get('https://'.$server->hostname.'/sso-clientxcms', [
             'sso_secret' => $ssoKey,
             'user_id' => $this->attributes->user,
         ]);
         if ($response->successful()) {
             $data = $response->json();
             if (isset($data['redirect'])) {
-                return $data['redirect'] . '?redirect=' . urlencode('/server/' . $this->identifier);
+                return $data['redirect'].'?redirect='.urlencode('/server/'.$this->identifier);
             }
         } else {
             $response = $response->json();
-            $message = $response['success'] && !$response['success']
+            $message = $response['success'] && ! $response['success']
                 ? $response['message']
                 : 'Something went wrong, please contact an administrator.';
 
             return redirect()->back()->withError($message);
         }
+
         return $this->getServerUrl($server);
     }
 
     private function getSsoKey(Server $server)
     {
-        $ssoKey = getenv('SSO_CLIENTXCMS_KEY' . $server->id);
+        $ssoKey = getenv('SSO_CLIENTXCMS_KEY'.$server->id);
         if (empty($ssoKey)) {
             $ssoKey = $server->hasMetadata('sso_key') ? $server->getMetadata('sso_key') : null;
             if ($ssoKey) {
                 return $ssoKey;
             }
         }
+
         return $ssoKey;
     }
 
@@ -296,13 +298,13 @@ class PterodactylServerDTO
             'external_id' => (string) $service->id,
             'name' => $serverData->attributes->name,
             'user' => $customer->id,
-            'description' => 'Exp: ' . $service->expires_at->format('d/m/y'),
+            'description' => 'Exp: '.$service->expires_at->format('d/m/y'),
         ];
         if (empty($serverData->attributes->description)) {
             unset($data['description']);
         }
 
-        return Http::callApi($server, 'servers/' . $serverId . '/details', $data, 'PATCH');
+        return Http::callApi($server, 'servers/'.$serverId.'/details', $data, 'PATCH');
     }
 
     public function upgrade(Service $service, PterodactylConfig $config)
@@ -311,7 +313,7 @@ class PterodactylServerDTO
         $serverData = PterodactylServerDTO::getServerFromExternalId($service);
         $serverId = $serverData->id;
         $user = PterodactylAccountDTO::getUserAccount($service->customer, $server, $service);
-        $request = Http::callApi($server, 'servers/' . $serverId);
+        $request = Http::callApi($server, 'servers/'.$serverId);
         if (! $request->successful(true)) {
             throw new ExternalApiException($request->formattedErrors());
         }
@@ -330,30 +332,31 @@ class PterodactylServerDTO
             ],
         ];
 
-        return Http::callApi($server, 'servers/' . $serverId . '/build', $data, 'PATCH');
+        return Http::callApi($server, 'servers/'.$serverId.'/build', $data, 'PATCH');
     }
 
     public static function getCurrentServerAllocation(Service $service, $server, $serverData)
     {
 
         if (isset($serverData->allocation) && is_numeric($serverData->allocation)) {
-            return (int)$serverData->allocation;
+            return (int) $serverData->allocation;
         }
 
         if (isset($serverData->allocation->id)) {
-            return (int)$serverData->allocation->id;
+            return (int) $serverData->allocation->id;
         }
 
         if (isset($serverData->relationships->allocation->data->id)) {
-            return (int)$serverData->relationships->allocation->data->id;
+            return (int) $serverData->relationships->allocation->data->id;
         }
 
         if (isset($serverData->relationships->allocation->data->attributes->id)) {
             logger()->info('Allocation trouvée - relationships allocation attributes', [
                 'server_id' => $server->id,
-                'allocation' => $serverData->relationships->allocation->data->attributes->id
+                'allocation' => $serverData->relationships->allocation->data->attributes->id,
             ]);
-            return (int)$serverData->relationships->allocation->data->attributes->id;
+
+            return (int) $serverData->relationships->allocation->data->attributes->id;
         }
 
         if (
@@ -372,13 +375,13 @@ class PterodactylServerDTO
             }
 
             if ($allocId) {
-                return (int)$allocId;
+                return (int) $allocId;
             }
         }
 
         $allocationsApi = \App\Modules\Pterodactyl\Http::callApi(
             $service->server,
-            'servers/' . $server->id . '?include=allocations',
+            'servers/'.$server->id.'?include=allocations',
             [],
             'GET',
             true,
@@ -389,7 +392,7 @@ class PterodactylServerDTO
             $data = $allocationsApi->toJson();
 
             if (isset($data->attributes->allocation) && is_numeric($data->attributes->allocation)) {
-                return (int)$data->attributes->allocation;
+                return (int) $data->attributes->allocation;
             }
 
             if (
@@ -402,7 +405,7 @@ class PterodactylServerDTO
                 $allocId = isset($firstAlloc->attributes->id) ? $firstAlloc->attributes->id : ($firstAlloc->id ?? null);
 
                 if ($allocId) {
-                    return (int)$allocId;
+                    return (int) $allocId;
                 }
             }
         }
@@ -429,15 +432,15 @@ class PterodactylServerDTO
             }
         }
 
-        $serverApi = Http::callApi($server, 'servers/' . $this->id, [], 'GET', true, 'application');
+        $serverApi = Http::callApi($server, 'servers/'.$this->id, [], 'GET', true, 'application');
         $serverData = $serverApi->toJson()->attributes ?? null;
 
-        if (!$serverData) {
+        if (! $serverData) {
             throw new ExternalApiException(__('pterodactyl::panel.cant_get_server'));
         }
 
         $currentAllocation = self::getCurrentServerAllocation($service, clone $this, $serverData);
-        if (!$currentAllocation) {
+        if (! $currentAllocation) {
             throw new ExternalApiException(__('pterodactyl::panel.cant_get_allocation'));
         }
 
@@ -484,8 +487,8 @@ class PterodactylServerDTO
 
         $startupPayload = [
             'startup' => $startup,
-            'environment' => (array)$environment,
-            'egg' => (int)$eggId,
+            'environment' => (array) $environment,
+            'egg' => (int) $eggId,
             'image' => $image,
             'skip_scripts' => false,
         ];
@@ -493,29 +496,29 @@ class PterodactylServerDTO
         logger()->info('ChangeEgg - Updating startup', [
             'server_id' => $this->id,
             'service_id' => $service->id,
-            'payload' => $startupPayload
+            'payload' => $startupPayload,
         ]);
 
         $updateStartupResult = Http::callApi(
             $server,
-            'servers/' . $this->id . '/startup',
+            'servers/'.$this->id.'/startup',
             $startupPayload,
             'PATCH',
             true,
             'application'
         );
 
-        if (!$updateStartupResult->successful()) {
+        if (! $updateStartupResult->successful()) {
             logger()->error('ChangeEgg - Error updating startup', [
                 'server_id' => $this->id,
                 'error' => $updateStartupResult->formattedErrors(),
-                'response' => $updateStartupResult->toJson()
+                'response' => $updateStartupResult->toJson(),
             ]);
-            throw new ExternalApiException(__('pterodactyl::panel.startup_error') . $updateStartupResult->formattedErrors());
+            throw new ExternalApiException(__('pterodactyl::panel.startup_error').$updateStartupResult->formattedErrors());
         }
 
         $buildPayload = [
-            'allocation' => (int)$currentAllocation,
+            'allocation' => (int) $currentAllocation,
             'memory' => $limits['memory'],
             'swap' => $limits['swap'],
             'disk' => $limits['disk'],
@@ -527,42 +530,42 @@ class PterodactylServerDTO
         logger()->info('ChangeEgg - Updating build', [
             'server_id' => $this->id,
             'service_id' => $service->id,
-            'payload' => $buildPayload
+            'payload' => $buildPayload,
         ]);
 
         $updateBuildResult = Http::callApi(
             $server,
-            'servers/' . $this->id . '/build',
+            'servers/'.$this->id.'/build',
             $buildPayload,
             'PATCH',
             true,
             'application'
         );
 
-        if (!$updateBuildResult->successful()) {
+        if (! $updateBuildResult->successful()) {
             logger()->error('ChangeEgg - Error updating build', [
                 'server_id' => $this->id,
                 'error' => $updateBuildResult->formattedErrors(),
-                'response' => $updateBuildResult->toJson()
+                'response' => $updateBuildResult->toJson(),
             ]);
-            throw new ExternalApiException(__('pterodactyl::panel.build_error') . $updateBuildResult->formattedErrors());
+            throw new ExternalApiException(__('pterodactyl::panel.build_error').$updateBuildResult->formattedErrors());
         }
 
         $reinstallResult = Http::callApi(
             $server,
-            'servers/' . $this->id . '/reinstall',
+            'servers/'.$this->id.'/reinstall',
             [],
             'POST',
             true,
             'application'
         );
 
-        if (!$reinstallResult->successful()) {
+        if (! $reinstallResult->successful()) {
             logger()->error('ChangeEgg - Error reinstalling', [
                 'server_id' => $this->id,
-                'error' => $reinstallResult->formattedErrors()
+                'error' => $reinstallResult->formattedErrors(),
             ]);
-            throw new ExternalApiException(__('pterodactyl::panel.reinstall_failed') . $reinstallResult->formattedErrors());
+            throw new ExternalApiException(__('pterodactyl::panel.reinstall_failed').$reinstallResult->formattedErrors());
         }
     }
 }
