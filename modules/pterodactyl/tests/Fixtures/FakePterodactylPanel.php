@@ -26,6 +26,11 @@ class FakePterodactylPanel
 
     public array $tags = [];
 
+    // Path regex => HTTP status, answered before any route (a panel that refuses a key, or is in maintenance).
+    public array $forcedStatus = [];
+
+    public bool $includeServersAuthorized = true;
+
     private int $nextServerId = 1000;
 
     public function __construct(public readonly string $version)
@@ -89,6 +94,11 @@ class FakePterodactylPanel
             return Http::response(['object' => 'list', 'data' => []]);
         }
         $path = trim(substr($path, strlen('/api/application')), '/');
+        foreach ($this->forcedStatus as $pattern => $status) {
+            if (preg_match($pattern, $path)) {
+                return $this->error($status, 'ForcedStatus', "forced {$status}");
+            }
+        }
         $perPage = (int) ($query['per_page'] ?? 50);
         if ($this->version === '2' && $perPage > 100) {
             return $this->error(422, 'ValidationException', 'The per page may not be greater than 100.');
@@ -111,8 +121,8 @@ class FakePterodactylPanel
             $method === 'GET' && (bool) preg_match('#^eggs/(\d+)$#', $path, $m) => $v2 && isset($this->eggs[$m[1]]) ? Http::response($this->egg($this->eggs[$m[1]], $include)) : null,
             $method === 'GET' && $path === 'locations' => $this->paginate([['object' => 'location', 'attributes' => ['id' => 1, 'short' => 'fr']]], $perPage, $query),
             $method === 'GET' && $path === 'users' => $this->paginate($this->filteredUsers($query), $perPage, $query),
-            $method === 'GET' && str_starts_with($path, 'users/external/') => null,
-            $method === 'GET' && (bool) preg_match('#^users/(\d+)$#', $path, $m) => isset($this->users[$m[1]]) ? Http::response(['object' => 'user', 'attributes' => $this->users[$m[1]]]) : null,
+            $method === 'GET' && (bool) preg_match('#^users/external/(.+)$#', $path, $m) => $this->userByExternalId(urldecode($m[1])),
+            $method === 'GET' && (bool) preg_match('#^users/(\d+)$#', $path, $m) => isset($this->users[$m[1]]) ? Http::response(['object' => 'user', 'attributes' => $this->userAttributes((int) $m[1], $include)]) : null,
             $method === 'PATCH' && (bool) preg_match('#^users/(\d+)$#', $path, $m) => Http::response(['object' => 'user', 'attributes' => $this->users[$m[1]]]),
             $method === 'POST' && $path === 'users' => $this->createUser($body),
             $method === 'GET' && $path === 'servers' => $this->paginate(array_values(array_map(fn ($server) => ['object' => 'server', 'attributes' => $server], $this->servers)), $perPage, $query),
@@ -170,8 +180,33 @@ class FakePterodactylPanel
             }
         }
         $id = $this->addUser($body['email']);
+        $this->users[$id]['external_id'] = $body['external_id'] ?? null;
 
         return Http::response(['object' => 'user', 'attributes' => $this->users[$id]], 201);
+    }
+
+    private function userByExternalId(string $externalId): ?PromiseInterface
+    {
+        foreach ($this->users as $user) {
+            if ($user['external_id'] === $externalId) {
+                return Http::response(['object' => 'user', 'attributes' => $user]);
+            }
+        }
+
+        return null;
+    }
+
+    private function userAttributes(int $id, array $include): array
+    {
+        $attributes = $this->users[$id];
+        if (in_array('servers', $include)) {
+            $owned = array_values(array_filter($this->servers, fn ($server) => $server['user'] === $id));
+            $attributes['relationships']['servers'] = $this->includeServersAuthorized
+                ? ['object' => 'list', 'data' => array_map(fn ($server) => ['object' => 'server', 'attributes' => $server], $owned)]
+                : ['object' => 'null_resource', 'attributes' => null];
+        }
+
+        return $attributes;
     }
 
     private function createServer(array $body): PromiseInterface

@@ -34,7 +34,7 @@ trait PterodactylConfigTrait
 
     private function fetchServers()
     {
-        return Cache::remember('pterodactyl_servers', now()->addMinutes(10), function () {
+        return Cache::remember("{$this->type}_config_servers", now()->addMinutes(10), function () {
             return collect($this->servers)->mapWithKeys(function (Server $server) {
                 return [$server->id => $server->name];
             })->toArray();

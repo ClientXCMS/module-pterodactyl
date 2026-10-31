@@ -17,6 +17,13 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions : [S
 - Un panel injoignable ou qui refuse la clé n'empêche plus d'afficher les eggs et les emplacements des autres panels.
 - Une liste d'eggs vide (panel momentanément en erreur) n'est plus gardée en cache.
 - Le changement d'egg depuis l'espace client n'accepte plus que les eggs proposés par l'offre, et une réinstallation sans changement garde la commande de démarrage du serveur.
+- Une livraison s'arrête avec un message clair quand le panel répond mal à la recherche d'identifiant de compte, au lieu de l'interroger sans fin (#8).
+- Retrouver le compte d'un client coûte une seule requête, quel que soit le nombre de serveurs du panel (#9).
+- La configuration d'un produit ne propose que les serveurs de son type, même juste après celle d'un produit d'un autre type (#10).
+- Les caches laissés par la version 1.4 sont supprimés à la mise à jour du module.
+
+### Modifié
+- Environnement d'egg et limites de ressources calculés en un seul endroit, pour la livraison, le changement d'offre et le changement d'egg (#11).
 
 ## [1.4.0]
 

@@ -172,18 +172,8 @@ class PterodactylConfig extends Model
             'egg' => $dto->egg,
             'docker_image' => $this->image ?? $dto->image,
             'startup' => $this->startup ?? $dto->startup,
-            'limits' => [
-                'memory' => (int) (($this->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
-                'swap' => $this->swap + $service->getOptionValue('additional_swap', 0),
-                'disk' => (int) (($this->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
-                'io' => $this->io + $service->getOptionValue('additional_io', 0),
-                'cpu' => ($this->cpu + $service->getOptionValue('additional_cpu', 0)),
-            ],
-            'feature_limits' => [
-                'databases' => $this->databases + $service->getOptionValue('additional_databases', 0),
-                'allocations' => $this->allocations + $service->getOptionValue('additional_allocations', 0),
-                'backups' => $this->backups + $service->getOptionValue('additional_backups', 0),
-            ],
+            'limits' => $this->limits($service),
+            'feature_limits' => $this->featureLimits($service),
             'deploy' => [
                 'locations' => [$service->getOptionValue($service->type.'_location_id', $this->location_id)],
                 'dedicated_ip' => (int) ($service->getOptionValue($service->type.'_dedicated_ip', $this->dedicated_ip ? 'true' : 'false') == 'true'),
@@ -192,6 +182,26 @@ class PterodactylConfig extends Model
             'environment' => $dto->environment,
             'start_on_completion' => true,
             'external_id' => (string) $dto->service->id,
+        ];
+    }
+
+    public function limits(Service $service): array
+    {
+        return [
+            'memory' => (int) (($this->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
+            'swap' => $this->swap + $service->getOptionValue('additional_swap', 0),
+            'disk' => (int) (($this->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
+            'io' => $this->io + $service->getOptionValue('additional_io', 0),
+            'cpu' => ($this->cpu + $service->getOptionValue('additional_cpu', 0)),
+        ];
+    }
+
+    public function featureLimits(Service $service): array
+    {
+        return [
+            'databases' => $this->databases + $service->getOptionValue('additional_databases', 0),
+            'allocations' => $this->allocations + $service->getOptionValue('additional_allocations', 0),
+            'backups' => $this->backups + $service->getOptionValue('additional_backups', 0),
         ];
     }
 

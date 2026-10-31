@@ -21,6 +21,7 @@ use App\Models\Provisioning\Server;
 use App\Models\Provisioning\Service;
 use App\Models\Store\Product;
 use App\Modules\Pterodactyl\Api\PanelApi;
+use App\Modules\Pterodactyl\DTO\EggDTO;
 use App\Modules\Pterodactyl\DTO\NodeAllocationDiagnosticDTO;
 use App\Modules\Pterodactyl\DTO\PterodactylAccountDTO;
 use App\Modules\Pterodactyl\DTO\PterodactylConfigDTO;
@@ -278,23 +279,12 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
     protected function getEnvFromNest(int $eggId, int $nestId, Server $server, Service $service)
     {
         $eggResult = PanelApi::for($server)->egg($eggId, $nestId, true);
-        if ($eggResult === null || ! $eggResult->successful(true)) {
+        $egg = $eggResult?->successful(true) ? EggDTO::fromResponse($eggResult) : null;
+        if ($egg === null) {
             throw new ServiceDeliveryException('Error while getting egg : '.json_encode($eggResult?->toJson()), $service, $eggResult?->status() ?? 404);
         }
-        $environment = [];
-        foreach ($eggResult->toJson()->attributes->relationships->variables->data as $key => $val) {
-            $attr = $val->attributes;
-            $var = $attr->env_variable;
-            $default = $attr->default_value;
 
-            if ($attr->env_variable == 'FIVEM_LICENSE' && (empty($default))) {
-                $default = 'Change me';
-            }
-            $envName = $data[$attr->env_variable] ?? $default;
-            $environment[$var] = $envName;
-        }
-
-        return [$environment, $eggResult->toJson()->attributes->docker_image, $eggResult->toJson()->attributes->startup];
+        return [$egg->environment(), $egg->image(), $egg->startup()];
     }
 
     public function importService(): ?ImportServiceInterface

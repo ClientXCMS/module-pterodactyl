@@ -115,6 +115,17 @@ class PterodactylServerDTO
         return array_values(array_map(fn ($value) => new PterodactylServerDTO($value->attributes), $owned));
     }
 
+    // One request instead of the whole server list; a key that cannot read servers gets no relation, then the list is read.
+    public static function ownsAnyServer(PterodactylAccountDTO $dto, Server $server): bool
+    {
+        $included = Http::callApi($server, 'users/'.$dto->id.'?include=servers')->toJson()->attributes->relationships->servers->data ?? null;
+        if (is_array($included)) {
+            return $included !== [];
+        }
+
+        return self::getServersUser($dto, $server) !== [];
+    }
+
     public static function getServerFromExternalId(Service $service): PterodactylServerDTO
     {
         $server = $service->server;
@@ -270,25 +281,11 @@ class PterodactylServerDTO
         $server = $service->server;
         $serverData = PterodactylServerDTO::getServerFromExternalId($service);
         $serverId = $serverData->id;
-        $user = PterodactylAccountDTO::getUserAccount($service->customer, $server, $service);
         $request = Http::callApi($server, 'servers/'.$serverId);
         if (! $request->successful(true)) {
             throw new ExternalApiException($request->formattedErrors());
         }
-        $data = $request->toJson()->attributes;
-        $data = [
-            'allocation' => $data->allocation,
-            'memory' => (int) (($config->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
-            'swap' => $config->swap + $service->getOptionValue('additional_swap', 0),
-            'disk' => (int) (($config->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
-            'io' => $config->io + $service->getOptionValue('additional_io', 0),
-            'cpu' => ($config->cpu + $service->getOptionValue('additional_cpu', 0)),
-            'feature_limits' => [
-                'databases' => $config->databases + $service->getOptionValue('additional_databases', 0),
-                'allocations' => $config->allocations + $service->getOptionValue('additional_allocations', 0),
-                'backups' => $config->backups + $service->getOptionValue('additional_backups', 0),
-            ],
-        ];
+        $data = ['allocation' => $request->toJson()->attributes->allocation] + $config->limits($service) + ['feature_limits' => $config->featureLimits($service)];
 
         return Http::callApi($server, 'servers/'.$serverId.'/build', $data, 'PATCH');
     }
@@ -395,44 +392,16 @@ class PterodactylServerDTO
             throw new ExternalApiException(__('pterodactyl::panel.cant_get_allocation'));
         }
 
-        $limits = [
-            'memory' => (int) (($config->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
-            'swap' => $config->swap + $service->getOptionValue('additional_swap', 0),
-            'disk' => (int) (($config->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
-            'io' => $config->io + $service->getOptionValue('additional_io', 0),
-            'cpu' => ($config->cpu + $service->getOptionValue('additional_cpu', 0)),
-        ];
-        $feature_limits = [
-            'databases' => $config->databases + $service->getOptionValue('additional_databases', 0),
-            'allocations' => $config->allocations + $service->getOptionValue('additional_allocations', 0),
-            'backups' => $config->backups + $service->getOptionValue('additional_backups', 0),
-        ];
-
         $startup = $serverData->container->startup_command ?? $serverData->container->startup ?? $config->startup;
         $image = $serverData->container->image ?? $config->image;
         $environment = $serverData->container->environment ?? [];
 
-        if ($offered !== null) {
-            $eggApi = PanelApi::for($server)->egg($offered[0], $offered[1], true);
-            if ($eggApi?->status() == 200 && isset($eggApi->toJson()->attributes)) {
-                $image = $eggApi->toJson()->attributes->docker_image ?? $image;
-                $startup = $eggApi->toJson()->attributes->startup ?? $startup;
-
-                if (isset($eggApi->toJson()->attributes->relationships->variables->data)) {
-                    $newEnvironment = [];
-                    foreach ($eggApi->toJson()->attributes->relationships->variables->data as $key => $val) {
-                        $attr = $val->attributes;
-                        $var = $attr->env_variable;
-                        $default = $attr->default_value;
-
-                        if ($attr->env_variable == 'FIVEM_LICENSE' && (empty($default))) {
-                            $default = 'Change me';
-                        }
-                        $envName = $service->data[$attr->env_variable] ?? $default;
-                        $newEnvironment[$var] = $envName;
-                    }
-                    $environment = $newEnvironment;
-                }
+        $egg = $offered === null ? null : EggDTO::fromResponse(PanelApi::for($server)->egg($offered[0], $offered[1], true));
+        if ($egg !== null) {
+            $image = $egg->image() ?? $image;
+            $startup = $egg->startup() ?? $startup;
+            if ($egg->hasVariables()) {
+                $environment = $egg->environment((array) $service->data);
             }
         }
 
@@ -468,15 +437,7 @@ class PterodactylServerDTO
             throw new ExternalApiException(__('pterodactyl::panel.startup_error').$updateStartupResult->formattedErrors());
         }
 
-        $buildPayload = [
-            'allocation' => (int) $currentAllocation,
-            'memory' => $limits['memory'],
-            'swap' => $limits['swap'],
-            'disk' => $limits['disk'],
-            'io' => $limits['io'],
-            'cpu' => $limits['cpu'],
-            'feature_limits' => $feature_limits,
-        ];
+        $buildPayload = ['allocation' => (int) $currentAllocation] + $config->limits($service) + ['feature_limits' => $config->featureLimits($service)];
 
         logger()->info('ChangeEgg - Updating build', [
             'server_id' => $this->id,

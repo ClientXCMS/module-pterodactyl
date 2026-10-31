@@ -21,6 +21,8 @@ class PterodactylAccountDTO
 
     const PER_PAGE = Http::PER_PAGE;
 
+    private const MAX_EXTERNAL_ID_ATTEMPTS = 20;
+
     public int $id;
 
     public ?string $external_id = null;
@@ -51,15 +53,17 @@ class PterodactylAccountDTO
 
     public static function createAccount(Customer $customer, Server $server, Service $service)
     {
-        $i = 0;
-        $externalId = (string) 'CLIENTXCMS-'.str_pad($customer->id, 5);
-        while (true) {
-            $existingExternalId = Http::callApi($server, self::ENDPOINT.'/external/'.$externalId);
-            if ($existingExternalId->status() == 404) {
+        // Same id sequence as before (padding included): accounts created by older versions keep matching.
+        $externalId = 'CLIENTXCMS-'.str_pad($customer->id, 5);
+        for ($i = 0; ; $i++) {
+            $status = Http::callApi($server, self::ENDPOINT.'/external/'.$externalId)->status();
+            if ($status == 404) {
                 break;
             }
-            $externalId = (string) "CLIENTXCMS$i-".str_pad($customer->id, 5);
-            $i++;
+            if ($status != 200 || $i >= self::MAX_EXTERNAL_ID_ATTEMPTS) {
+                throw new ServiceDeliveryException("Error while looking for a free pterodactyl external id (status {$status})", $service, $status ?: 500);
+            }
+            $externalId = "CLIENTXCMS$i-".str_pad($customer->id, 5);
         }
         $password = \Str::random(16);
         $data = [
@@ -122,8 +126,7 @@ class PterodactylAccountDTO
             }
         }
         if ($result != null) {
-            $servers = PterodactylServerDTO::getServersUser(new PterodactylAccountDTO($result), $server);
-            if (count($servers) == 0 && ! $result->root_admin) {
+            if (! $result->root_admin && ! PterodactylServerDTO::ownsAnyServer(new PterodactylAccountDTO($result), $server)) {
                 return (new PterodactylAccountDTO($result, false, null))->resetPassword($server, $service);
             }
 
