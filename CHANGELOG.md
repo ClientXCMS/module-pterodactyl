@@ -8,7 +8,7 @@ Format : [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/), versions : [S
 ### Ajouté
 - Compatibilité avec Pterodactyl 2.0, en plus de la 1.x : le module détecte seul la version de chaque panel et utilise les eggs et les tags en 2.0, les nests en 1.x.
 - La configuration produit affiche les eggs d'un panel 2.0 avec leurs tags, par exemple « Mumble Server (Voice Servers) ».
-- Après la mise à jour d'un panel de 1.x vers 2.0, le module bascule de lui-même dès la première opération qui touche un egg, sans vider de cache.
+- Après la mise à jour d'un panel de 1.x vers 2.0, le module bascule de lui-même dès la première opération qui touche un egg, sans vider de cache. Mettre à jour le module avant le panel : avant 1.5.0, il ne liste aucun egg sur un panel 2.0 et y annonce des suspensions qui n'ont pas eu lieu.
 
 ### Corrigé
 - Les configurations produit et les services enregistrés avant le passage du panel en 2.0 continuent de fonctionner, sans ressaisie, et les eggs déjà choisis restent sélectionnés dans la configuration produit.
