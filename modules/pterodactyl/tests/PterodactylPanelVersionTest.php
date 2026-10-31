@@ -97,6 +97,49 @@ class PterodactylPanelVersionTest extends TestCase
         $this->assertInstanceOf(TagPanelApi::class, PanelApi::for($server->fresh()));
     }
 
+    public function test_a_panel_upgraded_while_remembered_as_1_x_is_followed_at_the_first_egg_lookup(): void
+    {
+        $panel = $this->fakePanel('1');
+        $server = $this->panelServer();
+        PanelApi::for($server);
+        $panel->version = '2';
+
+        $egg = PanelApi::for($server)->egg(12, 3, true);
+
+        $this->assertSame(200, $egg?->status());
+        $this->assertInstanceOf(TagPanelApi::class, PanelApi::for($server));
+    }
+
+    public function test_a_panel_upgraded_while_remembered_as_1_x_still_lists_its_eggs(): void
+    {
+        $panel = $this->fakePanel('1');
+        $server = $this->panelServer();
+        PanelApi::for($server);
+        $panel->version = '2';
+
+        $this->assertCount(2, PanelApi::for($server)->eggs());
+    }
+
+    public function test_a_key_saved_on_2_x_is_resolved_even_while_the_panel_is_remembered_as_1_x(): void
+    {
+        $panel = $this->fakePanel('1');
+        $server = $this->panelServer();
+        PanelApi::for($server);
+        $panel->version = '2';
+
+        $this->assertSame(200, PanelApi::for($server)->egg(12, 0)?->status());
+    }
+
+    public function test_a_missing_egg_on_a_real_1_x_panel_costs_one_probe_and_no_loop(): void
+    {
+        $this->fakePanel('1');
+        $server = $this->panelServer();
+        PanelApi::for($server);
+
+        $this->assertSame(404, PanelApi::for($server)->egg(99, 3)?->status());
+        $this->assertSame(2, $this->requestsTo('GET', '#/tags$#'));
+    }
+
     #[\PHPUnit\Framework\Attributes\DataProvider('versions')]
     public function test_connection_test_succeeds_on_both_versions(string $version): void
     {

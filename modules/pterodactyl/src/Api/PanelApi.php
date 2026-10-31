@@ -57,6 +57,21 @@ abstract class PanelApi
 
     abstract public function eggResourceName(): string;
 
+    // A route of the remembered API is gone: the panel may have been upgraded since, so probe again (Wisp never changes).
+    protected function refreshed(): ?self
+    {
+        if ($this->server->type === 'wisp') {
+            return null;
+        }
+        $key = self::cacheKey($this->server);
+        if ($key !== null) {
+            Cache::forget($key);
+        }
+        $api = self::for($this->server);
+
+        return $api instanceof static ? null : $api;
+    }
+
     private static function make(string $kind, Server $server): self
     {
         return $kind === 'tags' ? new TagPanelApi($server) : new NestPanelApi($server);

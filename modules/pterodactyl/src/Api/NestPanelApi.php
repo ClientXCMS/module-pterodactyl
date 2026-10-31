@@ -9,6 +9,7 @@
 
 namespace App\Modules\Pterodactyl\Api;
 
+use App\Exceptions\ExternalApiException;
 use App\Modules\Pterodactyl\Http;
 use App\Modules\Pterodactyl\Models\PterodactylConfig;
 use App\Modules\Pterodactyl\PterodactylResponse;
@@ -17,6 +18,15 @@ use App\Modules\Pterodactyl\PterodactylResponse;
 class NestPanelApi extends PanelApi
 {
     public function eggs(): array
+    {
+        try {
+            return $this->eggsByNest();
+        } catch (ExternalApiException $e) {
+            return $this->refreshed()?->eggs() ?? throw $e;
+        }
+    }
+
+    private function eggsByNest(): array
     {
         $eggs = [];
         foreach (Http::listAll($this->server, 'nests') as $nest) {
@@ -32,10 +42,14 @@ class NestPanelApi extends PanelApi
     public function egg(int|string $eggId, int|string|null $nestId, bool $withVariables = false): ?PterodactylResponse
     {
         if ((int) $nestId <= 0) {
-            return null;
+            return $this->refreshed()?->egg($eggId, $nestId, $withVariables);
+        }
+        $response = Http::callApi($this->server, 'nests/'.(int) $nestId.'/eggs/'.(int) $eggId.($withVariables ? '?include=variables' : ''));
+        if ($response->status() === 404) {
+            return $this->refreshed()?->egg($eggId, $nestId, $withVariables) ?? $response;
         }
 
-        return Http::callApi($this->server, 'nests/'.(int) $nestId.'/eggs/'.(int) $eggId.($withVariables ? '?include=variables' : ''));
+        return $response;
     }
 
     public function eggAccessProbe(): PterodactylResponse

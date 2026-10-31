@@ -33,7 +33,8 @@ class FakePterodactylPanel
 
     private int $nextServerId = 1000;
 
-    public function __construct(public readonly string $version)
+    // Not readonly: a test may upgrade the same panel from 1.x to 2.x halfway through.
+    public function __construct(public string $version)
     {
         $this->nests = [1 => 'Minecraft', 3 => 'Voice Servers'];
         $this->tags = [
