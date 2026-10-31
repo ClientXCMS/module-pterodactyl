@@ -9,11 +9,16 @@
 
 namespace App\Modules\Pterodactyl;
 
+use App\Exceptions\ExternalApiException;
 use App\Models\Provisioning\Server;
 use RuntimeException;
 
 class Http
 {
+    public const PER_PAGE = 100;
+
+    private const MAX_PAGES = 500;
+
     public static function callApi(
         ?Server $server = null,
         string $endpoint = '',
@@ -52,5 +57,24 @@ class Http
         }
 
         return new PterodactylResponse($response, $server);
+    }
+
+    // 100 per page is the most a 2.x panel accepts (422 above); MAX_PAGES bounds a panel that never stops paginating.
+    public static function listAll(Server $server, string $endpoint, array $query = []): array
+    {
+        $items = [];
+        $page = 1;
+        do {
+            $url = $endpoint.'?'.http_build_query($query + ['per_page' => self::PER_PAGE, 'page' => $page], '', '&', PHP_QUERY_RFC3986);
+            $response = self::callApi($server, $url);
+            $body = $response->toJson();
+            if (! $response->successful() || ! isset($body->data) || ! is_array($body->data)) {
+                throw new ExternalApiException("{$endpoint} : ".$response->status().' '.$response->formattedErrors());
+            }
+            array_push($items, ...$body->data);
+            $lastPage = min((int) ($body->meta->pagination->total_pages ?? 1), self::MAX_PAGES);
+        } while ($page++ < $lastPage);
+
+        return $items;
     }
 }

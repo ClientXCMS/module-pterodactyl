@@ -122,6 +122,31 @@ class PterodactylConfig extends Model
         'server_description' => '%service_expiration%',
     ];
 
+    public static function eggKey(int|string $eggId, int|string $nestId): string
+    {
+        return $eggId.self::DELIMITER.$nestId;
+    }
+
+    // [egg, nest]; the nest part is only meaningful on 1.x panels and Wisp.
+    public static function parseEggKey(string $key): array
+    {
+        $parts = explode(self::DELIMITER, $key, 2);
+
+        return [$parts[0], $parts[1] ?? null];
+    }
+
+    public function offeredEgg(int|string|null $eggId): ?array
+    {
+        foreach ((array) $this->eggs as $key) {
+            $egg = self::parseEggKey((string) $key);
+            if ($eggId !== null && $egg[0] === (string) $eggId) {
+                return $egg;
+            }
+        }
+
+        return null;
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

@@ -12,14 +12,19 @@ namespace App\Modules\Pterodactyl;
 use App\DTO\Store\ProductDataDTO;
 use App\Models\Provisioning\Server;
 use App\Models\Provisioning\SubdomainHost;
+use App\Modules\Pterodactyl\Api\PanelApi;
 use App\Modules\Pterodactyl\Models\PterodactylConfig;
 use App\Rules\DomainIsNotRegisted;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\RequiredIf;
 
 class PterodactylData extends \App\Abstracts\AbstractProductData
 {
+    use RemembersNonEmpty;
+
+    // Bumped when the cached shape or its source changes, so a deployment never serves entries computed by the previous code.
+    const CACHE_PREFIX = 'pterodactyl_cache2';
+
     protected array $parameters = ['eggname', 'egg_id', 'nest_id'];
 
     protected string $namespace = 'pterodactyl';
@@ -38,29 +43,12 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
         if ($config == null) {
             return __('provisioning.product_not_configured');
         }
-        $eggs = Cache::rememberForever("pterodactyl_http_{$productDataDTO->product->id}", function () use ($productDataDTO, $config) {
-            if (count($config->eggs) == 1) {
-                [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $config->eggs[0]);
-                $result = Http::callApi(Server::find($config->server_id), "nests/$nest/eggs/$egg");
-                if ($result->status() == 200) {
-                    return [
-                        'eggnames' => [$result->toJson()->attributes->name => $result->toJson()->attributes->name],
-                        'defaultEgg' => $result->toJson()->attributes->name,
-                    ];
-                }
+        $productId = $productDataDTO->product->id;
+        $eggs = $this->rememberNonEmpty(self::CACHE_PREFIX."_http_{$productId}", null, function () use ($config, $productId) {
+            $names = $this->getEggs($config->eggs, $config->server_id, $productId);
 
-                return [
-                    'eggnames' => [],
-                    'defaultEgg' => 'Not found',
-                ];
-            }
-            $eggs = $this->getEggs($config->eggs, $config->server_id, $productDataDTO->product->id);
-
-            return [
-                'eggnames' => $eggs,
-                'defaultEgg' => $eggs[array_key_first($eggs)] ?? '',
-            ];
-        });
+            return $names === [] ? null : ['eggnames' => $names, 'defaultEgg' => $names[array_key_first($names)]];
+        }) ?? ['eggnames' => [], 'defaultEgg' => ''];
 
         $data['eggnames'] = $eggs['eggnames'];
         $data['eggname'] = $productDataDTO->data['eggname'] ?? $eggs['defaultEgg'];
@@ -114,19 +102,14 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
         }
 
         if ($eggname == null) {
+            [$egg, $nest] = PterodactylConfig::parseEggKey((string) current($config->eggs));
             $server = Server::find($config->server_id);
-            [$egg, $nest] = explode(PterodactylConfig::DELIMITER, current($config->eggs));
-            $request = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
-            if ($request->status() == 200) {
-                $eggname = $request->toJson()->attributes->name;
-            } else {
-                $eggname = 'Default';
-            }
+            $response = $server === null ? null : PanelApi::for($server)->egg($egg, $nest);
+            $eggname = $response?->status() == 200 ? $response->toJson()->attributes->name : 'Default';
         } else {
-            $eggs = $config->eggs;
-            [$egg, $nest] = $this->getEgg($eggs, $eggname, $config->server_id);
+            [$egg, $nest] = $this->getEgg($config->eggs, $eggname, $config->server_id);
 
-            if ($egg == null || $nest == null) {
+            if ($egg === null) {
                 return [
                     'error' => 'Please clear cache in extension page',
                 ];
@@ -148,18 +131,10 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function getEggs(array $eggsAndNest, int $serverId, int $productId): array
     {
-        return Cache::rememberForever("pterodactyl_eggs_$productId", function () use ($eggsAndNest, $serverId) {
+        return $this->rememberNonEmpty(self::CACHE_PREFIX."_eggs_{$productId}", null, function () use ($eggsAndNest, $serverId) {
             $eggs = [];
-            foreach ($eggsAndNest as $value) {
-                [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $value);
-                $server = Server::find($serverId);
-                $response = Http::callApi($server, "nests/$nest/eggs/$egg?include=variables");
-                if ($response->status() == 200) {
-                    $response = $response->toJson();
-                    $eggs[$response->attributes->name] = $response->attributes->name;
-                } else {
-                    // throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
-                }
+            foreach ($this->resolveEggs($eggsAndNest, $serverId) as $attributes) {
+                $eggs[$attributes->name] = $attributes->name;
             }
 
             return $eggs;
@@ -168,24 +143,35 @@ class PterodactylData extends \App\Abstracts\AbstractProductData
 
     public function getEgg(array $eggsAndNest, string $eggname, int $serverId): array
     {
-        return Cache::rememberForever("pterodactyl_egg_{$serverId}_{$eggname}", function () use ($eggsAndNest, $eggname, $serverId) {
-            foreach ($eggsAndNest as $value) {
-                [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $value);
-                $server = Server::find($serverId);
-
-                $response = Http::callApi($server, "nests/$nest/eggs/$egg");
-                if ($response->status() == 200) {
-                    $response = $response->toJson();
-                    if ($response->attributes->name === $eggname) {
-                        return [$egg, $nest];
-                    }
-                } else {
-                    // throw new \Exception($server->name.' : Egg '.$egg.' cannot be reached (check your application key permission) Statut code : '.$response->status());
+        return $this->rememberNonEmpty(self::CACHE_PREFIX."_egg_{$serverId}_{$eggname}", null, function () use ($eggsAndNest, $eggname, $serverId) {
+            foreach ($this->resolveEggs($eggsAndNest, $serverId) as $key => $attributes) {
+                if ($attributes->name === $eggname) {
+                    return PterodactylConfig::parseEggKey($key);
                 }
             }
 
-            return [null, null];
-        });
+            return null;
+        }) ?? [null, null];
+    }
+
+    // Saved key => egg attributes, for the eggs the panel still knows.
+    private function resolveEggs(array $eggsAndNest, int $serverId): array
+    {
+        $server = Server::find($serverId);
+        if ($server === null) {
+            return [];
+        }
+        $api = PanelApi::for($server);
+        $resolved = [];
+        foreach ($eggsAndNest as $key) {
+            [$egg, $nest] = PterodactylConfig::parseEggKey((string) $key);
+            $response = $api->egg($egg, $nest);
+            if ($response?->status() == 200 && isset($response->toJson()->attributes->name)) {
+                $resolved[$key] = $response->toJson()->attributes;
+            }
+        }
+
+        return $resolved;
     }
 
     protected function getConfig(int $productId)

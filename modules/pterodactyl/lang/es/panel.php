@@ -20,4 +20,5 @@ return [
     'startup_error' => 'Error al actualizar startup : ',
     'build_error' => 'Error al actualizar build : ',
     'reinstall_failed' => 'Configuración modificada pero error durante la reinstalación : ',
+    'egg_not_offered' => 'Este egg no está disponible con su oferta.',
 ];

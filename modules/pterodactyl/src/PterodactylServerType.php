@@ -20,6 +20,7 @@ use App\Models\Account\Customer;
 use App\Models\Provisioning\Server;
 use App\Models\Provisioning\Service;
 use App\Models\Store\Product;
+use App\Modules\Pterodactyl\Api\PanelApi;
 use App\Modules\Pterodactyl\DTO\NodeAllocationDiagnosticDTO;
 use App\Modules\Pterodactyl\DTO\PterodactylAccountDTO;
 use App\Modules\Pterodactyl\DTO\PterodactylConfigDTO;
@@ -74,17 +75,18 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
             }
             $clientResponse = Http::callApi($server, '', [], 'GET', true, 'client')->getResponse();
             $locationsResponse = Http::callApi($server, 'locations')->getResponse();
-            $nestsResponse = Http::callApi($server, 'nests')->getResponse();
+            $panelApi = PanelApi::for($server);
+            $eggsResponse = $panelApi->eggAccessProbe()->getResponse();
             $locationsValid = $locationsResponse->status() == 200;
-            $nestsValid = $nestsResponse->status() == 200;
+            $eggsValid = $eggsResponse->status() == 200;
             $clientValid = $clientResponse->status() == 200;
             $serversValid = $status == 200;
             $errorMessages = [];
             if (! $locationsValid) {
                 $errorMessages[] = 'Invalid "locations" Permissions Statut :'.$locationsResponse->status();
             }
-            if (! $nestsValid) {
-                $errorMessages[] = 'Invalid "nests" Permissions Statut :'.$nestsResponse->status();
+            if (! $eggsValid) {
+                $errorMessages[] = 'Invalid "'.$panelApi->eggResourceName().'" Permissions Statut :'.$eggsResponse->status();
             }
             if (! $clientValid) {
                 $errorMessages[] = 'Invalid "client" Permissions Statut :'.$clientResponse->status();
@@ -197,14 +199,13 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
         $userAccount = PterodactylAccountDTO::getUserAccount($user, $server, $service);
         $eggs = $config->eggs;
         if (count($eggs) == 1 || ! array_key_exists('nestId', $data)) {
-            $first = current($eggs);
-            [$eggId, $nestId] = explode(PterodactylConfig::DELIMITER, $first);
+            [$eggId, $nestId] = PterodactylConfig::parseEggKey((string) current($eggs));
         } else {
             $nestId = $data['nestId'] ?? '';
             $eggId = $data['eggId'] ?? '';
         }
-        [$environment, $docker, $startup] = $this->getEnvFromNest($eggId, $nestId, $server, $service);
-        $dto = new PterodactylConfigDTO($service, $user, $userAccount->id, $eggId, $nestId, $docker, $startup, $environment);
+        [$environment, $docker, $startup] = $this->getEnvFromNest((int) $eggId, (int) $nestId, $server, $service);
+        $dto = new PterodactylConfigDTO($service, $user, $userAccount->id, (int) $eggId, (int) $nestId, $docker, $startup, $environment);
         $serverResult = Http::callApi($server, 'servers', $config->toRequest($service, $dto), 'POST');
         if ($serverResult->successful(true)) {
             $serverId = $serverResult->toJson()->attributes->id;
@@ -276,9 +277,9 @@ class PterodactylServerType extends AbstractServerType implements ServerTypeInte
 
     protected function getEnvFromNest(int $eggId, int $nestId, Server $server, Service $service)
     {
-        $eggResult = Http::callApi($server, 'nests/'.$nestId.'/eggs/'.$eggId.'?include=variables');
-        if (! $eggResult->successful(true)) {
-            throw new ServiceDeliveryException('Error while getting egg : '.json_encode($eggResult->toJson()), $service, $eggResult->status());
+        $eggResult = PanelApi::for($server)->egg($eggId, $nestId, true);
+        if ($eggResult === null || ! $eggResult->successful(true)) {
+            throw new ServiceDeliveryException('Error while getting egg : '.json_encode($eggResult?->toJson()), $service, $eggResult?->status() ?? 404);
         }
         $environment = [];
         foreach ($eggResult->toJson()->attributes->relationships->variables->data as $key => $val) {

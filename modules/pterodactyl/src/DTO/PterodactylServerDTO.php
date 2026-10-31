@@ -13,6 +13,7 @@ use App\Exceptions\ExternalApiException;
 use App\Exceptions\ServiceDeliveryException;
 use App\Models\Provisioning\Server;
 use App\Models\Provisioning\Service;
+use App\Modules\Pterodactyl\Api\PanelApi;
 use App\Modules\Pterodactyl\Http;
 use App\Modules\Pterodactyl\Models\PterodactylConfig;
 
@@ -50,26 +51,7 @@ class PterodactylServerDTO
 
     public static function getAllServers(Server $server)
     {
-        $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'servers?per_page='.$perPage);
-        $results = [];
-        if ($initial->toJson() == null) {
-            return [];
-        }
-        if (property_exists($initial->toJson(), 'errors')) {
-            throw new ExternalApiException($initial->toJson()->errors[0]->detail);
-        }
-        foreach ($initial->toJson()->data as $value) {
-            $results[] = new PterodactylServerDTO($value->attributes);
-        }
-        for ($i = 1; $i <= $initial->toJson()->meta->pagination->total_pages; $i++) {
-            $serverResult = Http::callApi($server, "servers?per_page=$perPage&page=$i");
-            foreach ($serverResult->toJson()->data as $key => $value) {
-                $results[] = new PterodactylServerDTO($value->attributes);
-            }
-        }
-
-        return $results;
+        return array_map(fn ($value) => new PterodactylServerDTO($value->attributes), Http::listAll($server, 'servers'));
     }
 
     public static function getServerFromId(Server $server, int $serverId)
@@ -126,35 +108,11 @@ class PterodactylServerDTO
         return null;
     }
 
-    /**
-     * Permet de récupérer les serveurs d'un utilisateur
-     *
-     * @param  Service  $service
-     */
     public static function getServersUser(PterodactylAccountDTO $dto, Server $server): array
     {
-        $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'servers?per_page='.$perPage);
-        if (property_exists($initial->toJson(), 'errors')) {
-            throw new ExternalApiException($initial->toJson()->errors[0]->detail);
-        }
-        $results = [];
-        foreach ($initial->toJson()->data as $key => $value) {
-            if ($value->attributes->user == $dto->id) {
-                $results[] = new PterodactylServerDTO($value->attributes);
-            }
-        }
-        // Check if user is other pages
-        for ($i = 1; $i <= $initial->toJson()->meta->pagination->total_pages; $i++) {
-            $serverResult = Http::callApi($server, "users?per_page=$perPage&page=$i");
-            foreach ($serverResult as $key => $value) {
-                if ($value->attributes->user == $dto->id) {
-                    $results[] = new PterodactylServerDTO($value->attributes);
-                }
-            }
-        }
+        $owned = array_filter(Http::listAll($server, 'servers'), fn ($value) => $value->attributes->user == $dto->id);
 
-        return $results;
+        return array_values(array_map(fn ($value) => new PterodactylServerDTO($value->attributes), $owned));
     }
 
     public static function getServerFromExternalId(Service $service): PterodactylServerDTO
@@ -418,18 +376,11 @@ class PterodactylServerDTO
         $server = $service->server;
         $config = PterodactylConfig::where('product_id', $service->product_id)->first();
 
-        $nestId = null;
-        if ($config && isset($config->eggs)) {
-            $eggsArray = is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true);
-            if (is_array($eggsArray)) {
-                foreach ($eggsArray as $eggNest) {
-                    [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $eggNest);
-                    if ($egg == $eggId) {
-                        $nestId = $nest;
-                        break;
-                    }
-                }
-            }
+        // Only an egg sold with the offer, or the one already installed (plain reinstall), may be applied to the server.
+        $offered = $config?->offeredEgg($eggId);
+        $isCurrentEgg = (string) $eggId !== '' && (string) $eggId === (string) ($this->attributes->egg ?? '');
+        if ($config === null || ($offered === null && ! $isCurrentEgg)) {
+            throw new ExternalApiException(__('pterodactyl::panel.egg_not_offered'));
         }
 
         $serverApi = Http::callApi($server, 'servers/'.$this->id, [], 'GET', true, 'application');
@@ -457,13 +408,13 @@ class PterodactylServerDTO
             'backups' => $config->backups + $service->getOptionValue('additional_backups', 0),
         ];
 
-        $startup = $serverData->container->startup ?? $config->startup;
+        $startup = $serverData->container->startup_command ?? $serverData->container->startup ?? $config->startup;
         $image = $serverData->container->image ?? $config->image;
         $environment = $serverData->container->environment ?? [];
 
-        if ($eggId && $nestId) {
-            $eggApi = Http::callApi($server, "nests/$nestId/eggs/$eggId?include=variables", [], 'GET', true, 'application');
-            if ($eggApi->status() == 200 && isset($eggApi->toJson()->attributes)) {
+        if ($offered !== null) {
+            $eggApi = PanelApi::for($server)->egg($offered[0], $offered[1], true);
+            if ($eggApi?->status() == 200 && isset($eggApi->toJson()->attributes)) {
                 $image = $eggApi->toJson()->attributes->docker_image ?? $image;
                 $startup = $eggApi->toJson()->attributes->startup ?? $startup;
 

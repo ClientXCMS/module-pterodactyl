@@ -20,4 +20,5 @@ return [
     'startup_error' => 'Erreur lors de la mise à jour startup : ',
     'build_error' => 'Erreur lors de la mise à jour build : ',
     'reinstall_failed' => 'Configuration modifiée mais erreur lors de la réinstallation : ',
+    'egg_not_offered' => 'Cet egg n\'est pas proposé avec votre offre.',
 ];
