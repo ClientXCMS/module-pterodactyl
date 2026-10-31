@@ -20,4 +20,5 @@ return [
     'startup_error' => 'Error updating startup : ',
     'build_error' => 'Error updating build : ',
     'reinstall_failed' => 'Configuration modified but error during reinstallation : ',
+    'egg_not_offered' => 'This egg is not available with your plan.',
 ];

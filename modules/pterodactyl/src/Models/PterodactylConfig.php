@@ -18,8 +18,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * 
- *
  * @property int $id
  * @property int $product_id
  * @property float $memory
@@ -45,6 +43,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read Product $product
  * @property-read Server $server
+ *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig newQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig query()
@@ -71,6 +70,7 @@ use Illuminate\Database\Eloquent\Model;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereStartup($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereSwap($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PterodactylConfig whereUpdatedAt($value)
+ *
  * @mixin \Eloquent
  */
 class PterodactylConfig extends Model
@@ -122,6 +122,31 @@ class PterodactylConfig extends Model
         'server_description' => '%service_expiration%',
     ];
 
+    public static function eggKey(int|string $eggId, int|string $nestId): string
+    {
+        return $eggId.self::DELIMITER.$nestId;
+    }
+
+    // [egg, nest]; the nest part is only meaningful on 1.x panels and Wisp.
+    public static function parseEggKey(string $key): array
+    {
+        $parts = explode(self::DELIMITER, $key, 2);
+
+        return [$parts[0], $parts[1] ?? null];
+    }
+
+    public function offeredEgg(int|string|null $eggId): ?array
+    {
+        foreach ((array) $this->eggs as $key) {
+            $egg = self::parseEggKey((string) $key);
+            if ($eggId !== null && $egg[0] === (string) $eggId) {
+                return $egg;
+            }
+        }
+
+        return null;
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);
@@ -147,18 +172,8 @@ class PterodactylConfig extends Model
             'egg' => $dto->egg,
             'docker_image' => $this->image ?? $dto->image,
             'startup' => $this->startup ?? $dto->startup,
-            'limits' => [
-                'memory' => (int) (($this->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
-                'swap' => $this->swap + $service->getOptionValue('additional_swap', 0),
-                'disk' => (int) (($this->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
-                'io' => $this->io + $service->getOptionValue('additional_io', 0),
-                'cpu' => ($this->cpu + $service->getOptionValue('additional_cpu', 0)),
-            ],
-            'feature_limits' => [
-                'databases' => $this->databases + $service->getOptionValue('additional_databases', 0),
-                'allocations' => $this->allocations + $service->getOptionValue('additional_allocations', 0),
-                'backups' => $this->backups + $service->getOptionValue('additional_backups', 0),
-            ],
+            'limits' => $this->limits($service),
+            'feature_limits' => $this->featureLimits($service),
             'deploy' => [
                 'locations' => [$service->getOptionValue($service->type.'_location_id', $this->location_id)],
                 'dedicated_ip' => (int) ($service->getOptionValue($service->type.'_dedicated_ip', $this->dedicated_ip ? 'true' : 'false') == 'true'),
@@ -167,6 +182,26 @@ class PterodactylConfig extends Model
             'environment' => $dto->environment,
             'start_on_completion' => true,
             'external_id' => (string) $dto->service->id,
+        ];
+    }
+
+    public function limits(Service $service): array
+    {
+        return [
+            'memory' => (int) (($this->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
+            'swap' => $this->swap + $service->getOptionValue('additional_swap', 0),
+            'disk' => (int) (($this->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
+            'io' => $this->io + $service->getOptionValue('additional_io', 0),
+            'cpu' => ($this->cpu + $service->getOptionValue('additional_cpu', 0)),
+        ];
+    }
+
+    public function featureLimits(Service $service): array
+    {
+        return [
+            'databases' => $this->databases + $service->getOptionValue('additional_databases', 0),
+            'allocations' => $this->allocations + $service->getOptionValue('additional_allocations', 0),
+            'backups' => $this->backups + $service->getOptionValue('additional_backups', 0),
         ];
     }
 

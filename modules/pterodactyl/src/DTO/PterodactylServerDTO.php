@@ -13,6 +13,7 @@ use App\Exceptions\ExternalApiException;
 use App\Exceptions\ServiceDeliveryException;
 use App\Models\Provisioning\Server;
 use App\Models\Provisioning\Service;
+use App\Modules\Pterodactyl\Api\PanelApi;
 use App\Modules\Pterodactyl\Http;
 use App\Modules\Pterodactyl\Models\PterodactylConfig;
 
@@ -50,26 +51,7 @@ class PterodactylServerDTO
 
     public static function getAllServers(Server $server)
     {
-        $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'servers?per_page=' . $perPage);
-        $results = [];
-        if ($initial->toJson() == null) {
-            return [];
-        }
-        if (property_exists($initial->toJson(), 'errors')) {
-            throw new ExternalApiException($initial->toJson()->errors[0]->detail);
-        }
-        foreach ($initial->toJson()->data as $value) {
-            $results[] = new PterodactylServerDTO($value->attributes);
-        }
-        for ($i = 1; $i <= $initial->toJson()->meta->pagination->total_pages; $i++) {
-            $serverResult = Http::callApi($server, "servers?per_page=$perPage&page=$i");
-            foreach ($serverResult->toJson()->data as $key => $value) {
-                $results[] = new PterodactylServerDTO($value->attributes);
-            }
-        }
-
-        return $results;
+        return array_map(fn ($value) => new PterodactylServerDTO($value->attributes), Http::listAll($server, 'servers'));
     }
 
     public static function getServerFromId(Server $server, int $serverId)
@@ -101,7 +83,7 @@ class PterodactylServerDTO
 
     public function getUtilization(Server $server)
     {
-        $utilizationResult = Http::callApi($server, 'servers/' . $this->identifier . '/resources', [], 'GET', true, 'client');
+        $utilizationResult = Http::callApi($server, 'servers/'.$this->identifier.'/resources', [], 'GET', true, 'client');
         if (property_exists($utilizationResult->toJson(), 'errors')) {
             throw new ExternalApiException($utilizationResult->toJson()->errors[0]->detail);
         }
@@ -126,35 +108,22 @@ class PterodactylServerDTO
         return null;
     }
 
-    /**
-     * Permet de récupérer les serveurs d'un utilisateur
-     *
-     * @param  Service  $service
-     */
     public static function getServersUser(PterodactylAccountDTO $dto, Server $server): array
     {
-        $perPage = PterodactylAccountDTO::PER_PAGE;
-        $initial = Http::callApi($server, 'servers?per_page=' . $perPage);
-        if (property_exists($initial->toJson(), 'errors')) {
-            throw new ExternalApiException($initial->toJson()->errors[0]->detail);
-        }
-        $results = [];
-        foreach ($initial->toJson()->data as $key => $value) {
-            if ($value->attributes->user == $dto->id) {
-                $results[] = new PterodactylServerDTO($value->attributes);
-            }
-        }
-        // Check if user is other pages
-        for ($i = 1; $i <= $initial->toJson()->meta->pagination->total_pages; $i++) {
-            $serverResult = Http::callApi($server, "users?per_page=$perPage&page=$i");
-            foreach ($serverResult as $key => $value) {
-                if ($value->attributes->user == $dto->id) {
-                    $results[] = new PterodactylServerDTO($value->attributes);
-                }
-            }
+        $owned = array_filter(Http::listAll($server, 'servers'), fn ($value) => $value->attributes->user == $dto->id);
+
+        return array_values(array_map(fn ($value) => new PterodactylServerDTO($value->attributes), $owned));
+    }
+
+    // One request instead of the whole server list; a key that cannot read servers gets no relation, then the list is read.
+    public static function ownsAnyServer(PterodactylAccountDTO $dto, Server $server): bool
+    {
+        $included = Http::callApi($server, 'users/'.$dto->id.'?include=servers')->toJson()->attributes->relationships->servers->data ?? null;
+        if (is_array($included)) {
+            return $included !== [];
         }
 
-        return $results;
+        return self::getServersUser($dto, $server) !== [];
     }
 
     public static function getServerFromExternalId(Service $service): PterodactylServerDTO
@@ -202,20 +171,20 @@ class PterodactylServerDTO
             'external_id' => (string) $service->id,
             'name' => $serverData->attributes->name,
             'user' => $user->id,
-            'description' => 'Exp: ' . $service->expires_at->format('d/m/y'),
+            'description' => 'Exp: '.$service->expires_at->format('d/m/y'),
         ];
         if (empty($serverData->attributes->description)) {
             unset($data['description']);
         }
 
-        return Http::callApi($server, 'servers/' . $serverId . '/details', $data, 'PATCH');
+        return Http::callApi($server, 'servers/'.$serverId.'/details', $data, 'PATCH');
     }
 
     public function getAddresses(): string
     {
         if (property_exists($this->attributes->relationships->allocations, 'data')) {
             return collect($this->attributes->relationships->allocations->data)->map(function ($data) {
-                return ($data->attributes->alias ?? $data->attributes->ip) . ':' . $data->attributes->port;
+                return ($data->attributes->alias ?? $data->attributes->ip).':'.$data->attributes->port;
             })->join(',');
         }
 
@@ -241,35 +210,37 @@ class PterodactylServerDTO
         if (empty($ssoKey)) {
             return $this->getServerUrl($server);
         }
-        $response = \Http::get("https://" . $server->hostname . '/sso-clientxcms', [
+        $response = \Http::get('https://'.$server->hostname.'/sso-clientxcms', [
             'sso_secret' => $ssoKey,
             'user_id' => $this->attributes->user,
         ]);
         if ($response->successful()) {
             $data = $response->json();
             if (isset($data['redirect'])) {
-                return $data['redirect'] . '?redirect=' . urlencode('/server/' . $this->identifier);
+                return $data['redirect'].'?redirect='.urlencode('/server/'.$this->identifier);
             }
         } else {
             $response = $response->json();
-            $message = $response['success'] && !$response['success']
+            $message = $response['success'] && ! $response['success']
                 ? $response['message']
                 : 'Something went wrong, please contact an administrator.';
 
             return redirect()->back()->withError($message);
         }
+
         return $this->getServerUrl($server);
     }
 
     private function getSsoKey(Server $server)
     {
-        $ssoKey = getenv('SSO_CLIENTXCMS_KEY' . $server->id);
+        $ssoKey = getenv('SSO_CLIENTXCMS_KEY'.$server->id);
         if (empty($ssoKey)) {
             $ssoKey = $server->hasMetadata('sso_key') ? $server->getMetadata('sso_key') : null;
             if ($ssoKey) {
                 return $ssoKey;
             }
         }
+
         return $ssoKey;
     }
 
@@ -296,13 +267,13 @@ class PterodactylServerDTO
             'external_id' => (string) $service->id,
             'name' => $serverData->attributes->name,
             'user' => $customer->id,
-            'description' => 'Exp: ' . $service->expires_at->format('d/m/y'),
+            'description' => 'Exp: '.$service->expires_at->format('d/m/y'),
         ];
         if (empty($serverData->attributes->description)) {
             unset($data['description']);
         }
 
-        return Http::callApi($server, 'servers/' . $serverId . '/details', $data, 'PATCH');
+        return Http::callApi($server, 'servers/'.$serverId.'/details', $data, 'PATCH');
     }
 
     public function upgrade(Service $service, PterodactylConfig $config)
@@ -310,50 +281,37 @@ class PterodactylServerDTO
         $server = $service->server;
         $serverData = PterodactylServerDTO::getServerFromExternalId($service);
         $serverId = $serverData->id;
-        $user = PterodactylAccountDTO::getUserAccount($service->customer, $server, $service);
-        $request = Http::callApi($server, 'servers/' . $serverId);
+        $request = Http::callApi($server, 'servers/'.$serverId);
         if (! $request->successful(true)) {
             throw new ExternalApiException($request->formattedErrors());
         }
-        $data = $request->toJson()->attributes;
-        $data = [
-            'allocation' => $data->allocation,
-            'memory' => (int) (($config->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
-            'swap' => $config->swap + $service->getOptionValue('additional_swap', 0),
-            'disk' => (int) (($config->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
-            'io' => $config->io + $service->getOptionValue('additional_io', 0),
-            'cpu' => ($config->cpu + $service->getOptionValue('additional_cpu', 0)),
-            'feature_limits' => [
-                'databases' => $config->databases + $service->getOptionValue('additional_databases', 0),
-                'allocations' => $config->allocations + $service->getOptionValue('additional_allocations', 0),
-                'backups' => $config->backups + $service->getOptionValue('additional_backups', 0),
-            ],
-        ];
+        $data = ['allocation' => $request->toJson()->attributes->allocation] + $config->limits($service) + ['feature_limits' => $config->featureLimits($service)];
 
-        return Http::callApi($server, 'servers/' . $serverId . '/build', $data, 'PATCH');
+        return Http::callApi($server, 'servers/'.$serverId.'/build', $data, 'PATCH');
     }
 
     public static function getCurrentServerAllocation(Service $service, $server, $serverData)
     {
 
         if (isset($serverData->allocation) && is_numeric($serverData->allocation)) {
-            return (int)$serverData->allocation;
+            return (int) $serverData->allocation;
         }
 
         if (isset($serverData->allocation->id)) {
-            return (int)$serverData->allocation->id;
+            return (int) $serverData->allocation->id;
         }
 
         if (isset($serverData->relationships->allocation->data->id)) {
-            return (int)$serverData->relationships->allocation->data->id;
+            return (int) $serverData->relationships->allocation->data->id;
         }
 
         if (isset($serverData->relationships->allocation->data->attributes->id)) {
             logger()->info('Allocation trouvée - relationships allocation attributes', [
                 'server_id' => $server->id,
-                'allocation' => $serverData->relationships->allocation->data->attributes->id
+                'allocation' => $serverData->relationships->allocation->data->attributes->id,
             ]);
-            return (int)$serverData->relationships->allocation->data->attributes->id;
+
+            return (int) $serverData->relationships->allocation->data->attributes->id;
         }
 
         if (
@@ -372,13 +330,13 @@ class PterodactylServerDTO
             }
 
             if ($allocId) {
-                return (int)$allocId;
+                return (int) $allocId;
             }
         }
 
         $allocationsApi = \App\Modules\Pterodactyl\Http::callApi(
             $service->server,
-            'servers/' . $server->id . '?include=allocations',
+            'servers/'.$server->id.'?include=allocations',
             [],
             'GET',
             true,
@@ -389,7 +347,7 @@ class PterodactylServerDTO
             $data = $allocationsApi->toJson();
 
             if (isset($data->attributes->allocation) && is_numeric($data->attributes->allocation)) {
-                return (int)$data->attributes->allocation;
+                return (int) $data->attributes->allocation;
             }
 
             if (
@@ -402,7 +360,7 @@ class PterodactylServerDTO
                 $allocId = isset($firstAlloc->attributes->id) ? $firstAlloc->attributes->id : ($firstAlloc->id ?? null);
 
                 if ($allocId) {
-                    return (int)$allocId;
+                    return (int) $allocId;
                 }
             }
         }
@@ -415,77 +373,42 @@ class PterodactylServerDTO
         $server = $service->server;
         $config = PterodactylConfig::where('product_id', $service->product_id)->first();
 
-        $nestId = null;
-        if ($config && isset($config->eggs)) {
-            $eggsArray = is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true);
-            if (is_array($eggsArray)) {
-                foreach ($eggsArray as $eggNest) {
-                    [$egg, $nest] = explode(PterodactylConfig::DELIMITER, $eggNest);
-                    if ($egg == $eggId) {
-                        $nestId = $nest;
-                        break;
-                    }
-                }
-            }
+        // Only an egg sold with the offer, or the one already installed (plain reinstall), may be applied to the server.
+        $offered = $config?->offeredEgg($eggId);
+        $isCurrentEgg = (string) $eggId !== '' && (string) $eggId === (string) ($this->attributes->egg ?? '');
+        if ($config === null || ($offered === null && ! $isCurrentEgg)) {
+            throw new ExternalApiException(__('pterodactyl::panel.egg_not_offered'));
         }
 
-        $serverApi = Http::callApi($server, 'servers/' . $this->id, [], 'GET', true, 'application');
+        $serverApi = Http::callApi($server, 'servers/'.$this->id, [], 'GET', true, 'application');
         $serverData = $serverApi->toJson()->attributes ?? null;
 
-        if (!$serverData) {
+        if (! $serverData) {
             throw new ExternalApiException(__('pterodactyl::panel.cant_get_server'));
         }
 
         $currentAllocation = self::getCurrentServerAllocation($service, clone $this, $serverData);
-        if (!$currentAllocation) {
+        if (! $currentAllocation) {
             throw new ExternalApiException(__('pterodactyl::panel.cant_get_allocation'));
         }
 
-        $limits = [
-            'memory' => (int) (($config->memory + $service->getOptionValue('additional_memory', 0)) * 1024),
-            'swap' => $config->swap + $service->getOptionValue('additional_swap', 0),
-            'disk' => (int) (($config->disk + $service->getOptionValue('additional_disk', 0)) * 1024),
-            'io' => $config->io + $service->getOptionValue('additional_io', 0),
-            'cpu' => ($config->cpu + $service->getOptionValue('additional_cpu', 0)),
-        ];
-        $feature_limits = [
-            'databases' => $config->databases + $service->getOptionValue('additional_databases', 0),
-            'allocations' => $config->allocations + $service->getOptionValue('additional_allocations', 0),
-            'backups' => $config->backups + $service->getOptionValue('additional_backups', 0),
-        ];
-
-        $startup = $serverData->container->startup ?? $config->startup;
+        $startup = $serverData->container->startup_command ?? $serverData->container->startup ?? $config->startup;
         $image = $serverData->container->image ?? $config->image;
         $environment = $serverData->container->environment ?? [];
 
-        if ($eggId && $nestId) {
-            $eggApi = Http::callApi($server, "nests/$nestId/eggs/$eggId?include=variables", [], 'GET', true, 'application');
-            if ($eggApi->status() == 200 && isset($eggApi->toJson()->attributes)) {
-                $image = $eggApi->toJson()->attributes->docker_image ?? $image;
-                $startup = $eggApi->toJson()->attributes->startup ?? $startup;
-
-                if (isset($eggApi->toJson()->attributes->relationships->variables->data)) {
-                    $newEnvironment = [];
-                    foreach ($eggApi->toJson()->attributes->relationships->variables->data as $key => $val) {
-                        $attr = $val->attributes;
-                        $var = $attr->env_variable;
-                        $default = $attr->default_value;
-
-                        if ($attr->env_variable == 'FIVEM_LICENSE' && (empty($default))) {
-                            $default = 'Change me';
-                        }
-                        $envName = $service->data[$attr->env_variable] ?? $default;
-                        $newEnvironment[$var] = $envName;
-                    }
-                    $environment = $newEnvironment;
-                }
+        $egg = $offered === null ? null : EggDTO::fromResponse(PanelApi::for($server)->egg($offered[0], $offered[1], true));
+        if ($egg !== null) {
+            $image = $egg->image() ?? $image;
+            $startup = $egg->startup() ?? $startup;
+            if ($egg->hasVariables()) {
+                $environment = $egg->environment((array) $service->data);
             }
         }
 
         $startupPayload = [
             'startup' => $startup,
-            'environment' => (array)$environment,
-            'egg' => (int)$eggId,
+            'environment' => (array) $environment,
+            'egg' => (int) $eggId,
             'image' => $image,
             'skip_scripts' => false,
         ];
@@ -493,76 +416,68 @@ class PterodactylServerDTO
         logger()->info('ChangeEgg - Updating startup', [
             'server_id' => $this->id,
             'service_id' => $service->id,
-            'payload' => $startupPayload
+            'payload' => $startupPayload,
         ]);
 
         $updateStartupResult = Http::callApi(
             $server,
-            'servers/' . $this->id . '/startup',
+            'servers/'.$this->id.'/startup',
             $startupPayload,
             'PATCH',
             true,
             'application'
         );
 
-        if (!$updateStartupResult->successful()) {
+        if (! $updateStartupResult->successful()) {
             logger()->error('ChangeEgg - Error updating startup', [
                 'server_id' => $this->id,
                 'error' => $updateStartupResult->formattedErrors(),
-                'response' => $updateStartupResult->toJson()
+                'response' => $updateStartupResult->toJson(),
             ]);
-            throw new ExternalApiException(__('pterodactyl::panel.startup_error') . $updateStartupResult->formattedErrors());
+            throw new ExternalApiException(__('pterodactyl::panel.startup_error').$updateStartupResult->formattedErrors());
         }
 
-        $buildPayload = [
-            'allocation' => (int)$currentAllocation,
-            'memory' => $limits['memory'],
-            'swap' => $limits['swap'],
-            'disk' => $limits['disk'],
-            'io' => $limits['io'],
-            'cpu' => $limits['cpu'],
-            'feature_limits' => $feature_limits,
-        ];
+        $buildPayload = ['allocation' => (int) $currentAllocation] + $config->limits($service) + ['feature_limits' => $config->featureLimits($service)];
 
         logger()->info('ChangeEgg - Updating build', [
             'server_id' => $this->id,
             'service_id' => $service->id,
-            'payload' => $buildPayload
+            'payload' => $buildPayload,
         ]);
 
         $updateBuildResult = Http::callApi(
             $server,
-            'servers/' . $this->id . '/build',
+            'servers/'.$this->id.'/build',
             $buildPayload,
             'PATCH',
             true,
             'application'
         );
 
-        if (!$updateBuildResult->successful()) {
+        if (! $updateBuildResult->successful()) {
             logger()->error('ChangeEgg - Error updating build', [
                 'server_id' => $this->id,
                 'error' => $updateBuildResult->formattedErrors(),
-                'response' => $updateBuildResult->toJson()
+                'response' => $updateBuildResult->toJson(),
             ]);
-            throw new ExternalApiException(__('pterodactyl::panel.build_error') . $updateBuildResult->formattedErrors());
+            throw new ExternalApiException(__('pterodactyl::panel.build_error').$updateBuildResult->formattedErrors());
         }
 
         $reinstallResult = Http::callApi(
             $server,
-            'servers/' . $this->id . '/reinstall',
+            'servers/'.$this->id.'/reinstall',
             [],
             'POST',
             true,
             'application'
         );
 
-        if (!$reinstallResult->successful()) {
+        if (! $reinstallResult->successful()) {
             logger()->error('ChangeEgg - Error reinstalling', [
                 'server_id' => $this->id,
-                'error' => $reinstallResult->formattedErrors()
+                'error' => $reinstallResult->formattedErrors(),
             ]);
-            throw new ExternalApiException(__('pterodactyl::panel.reinstall_failed') . $reinstallResult->formattedErrors());
+            throw new ExternalApiException(__('pterodactyl::panel.reinstall_failed').$reinstallResult->formattedErrors());
         }
     }
 }

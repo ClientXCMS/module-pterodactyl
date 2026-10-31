@@ -13,7 +13,9 @@ use App\Abstracts\AbstractPanelProvisioning;
 use App\DTO\Provisioning\ProvisioningTabDTO;
 use App\Exceptions\ExternalApiException;
 use App\Models\Provisioning\Service;
+use App\Modules\Pterodactyl\Api\PanelApi;
 use App\Modules\Pterodactyl\DTO\PterodactylServerDTO;
+use App\Modules\Pterodactyl\Models\PterodactylConfig;
 use Illuminate\Http\RedirectResponse;
 
 class PterodactylPanel extends AbstractPanelProvisioning
@@ -84,6 +86,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
         }
         $data['uuid'] = $this->uuid;
         $data['offline'] = $this->offline;
+
         return view($service->type.'::panel/index', $data);
     }
 
@@ -110,29 +113,19 @@ class PterodactylPanel extends AbstractPanelProvisioning
 
                 return '';
             }
-            $config = \App\Modules\Pterodactyl\Models\PterodactylConfig::where('product_id', $service->product_id)->first();
+            $config = PterodactylConfig::where('product_id', $service->product_id)->first();
             $data['server'] = $serverResult;
+            $panelApi = PanelApi::for($service->server);
             $eggs = [];
-            if ($config && isset($config->eggs)) {
-                $eggsArray = is_array($config->eggs) ? $config->eggs : json_decode($config->eggs, true);
-                if (is_array($eggsArray)) {
-                    foreach ($eggsArray as $eggNest) {
-                        [$eggId, $nestId] = explode(\App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER, $eggNest);
-                        $server = $service->server;
-                        $eggResponse = \App\Modules\Pterodactyl\Http::callApi($server, "nests/$nestId/eggs/$eggId");
-                        if ($eggResponse->status() == 200 && isset($eggResponse->toJson()->attributes->name)) {
-                            $eggName = $eggResponse->toJson()->attributes->name;
-                            $eggs[$eggId] = $eggName;
-                        } else {
-                            $eggs[$eggId] = $eggId;
-                        }
-                    }
-                }
+            foreach ((array) ($config->eggs ?? []) as $key) {
+                [$eggId, $nestId] = PterodactylConfig::parseEggKey((string) $key);
+                $eggResponse = $panelApi->egg($eggId, $nestId);
+                $eggs[$eggId] = $eggResponse?->status() == 200 ? ($eggResponse->toJson()->attributes->name ?? $eggId) : $eggId;
             }
             $data['eggs'] = $eggs;
         } catch (ExternalApiException $e) {
             logger()->error($e->getMessage());
-            if (in_array('*', $permissions)) {
+            if (in_array('*', $data['permissions'])) {
                 \Session::flash('error', $e->getMessage());
             } else {
                 \Session::flash('error', __('client.alerts.internalerror'));
@@ -142,6 +135,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
         }
         $data['uuid'] = $this->uuid;
         $data['offline'] = $this->offline;
+
         return view($service->type.'::panel/reinstall', $data);
     }
 
@@ -154,6 +148,7 @@ class PterodactylPanel extends AbstractPanelProvisioning
     {
         $serverResult = PterodactylServerDTO::getServerFromExternalId($service);
         $redirect = $serverResult->autologin($service->server);
+
         return new RedirectResponse($redirect);
     }
 }

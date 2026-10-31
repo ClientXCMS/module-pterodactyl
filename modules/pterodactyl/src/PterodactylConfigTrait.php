@@ -9,57 +9,32 @@
 
 namespace App\Modules\Pterodactyl;
 
+use App\Exceptions\ExternalApiException;
 use App\Models\Provisioning\Server;
+use App\Modules\Pterodactyl\Api\PanelApi;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Session;
 
 trait PterodactylConfigTrait
 {
-    private function fetchEggs()
+    use RemembersNonEmpty;
+
+    private function fetchEggs(): array
     {
-        return Cache::remember('pterodactyl_eggs', now()->addMinutes(10), function () {
-            $tmp = [];
+        return $this->rememberNonEmpty("{$this->type}_config_eggs", now()->addMinutes(10), function () {
+            $eggs = [];
             foreach ($this->servers as $server) {
-                $response = Http::callApi($server, 'nests')->toJson();
-                if ($response == null) {
-                    Session::flash('error', $server->name.' : Error PHPMyAdmin detected. Please use domain name.');
-
-                    continue;
-                }
-                if (property_exists($response, 'data')) {
-                    $data = $response->data;
-                } else {
-                    Session::flash('error', $server->name.' : Nests or locations cannot be reached (check your application key permission)');
-
-                    continue;
-                }
-                foreach ($data as $element) {
-                    $attr = $element->attributes;
-                    $nestId = $attr->id;
-                    $nest = $attr;
-                    $request = Http::callApi($server, "nests/$nestId/eggs");
-                    if ($request->status() != 200) {
-                        Session::flash('error', $server->name.' : Nests '.$nestId.' cannot be reached (check your application key permission) Statut code : '.$request->status());
-
-                        continue;
-                    }
-                    $eggs = $request->toJson()->data;
-                    foreach ($eggs as $egg) {
-                        $tmp[implode(\App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER, [$egg->attributes->id, $nest->id])] = $egg->attributes->name.' ('.$nest->name.')';
-                    }
-                }
-            }
-            if (empty($tmp)) {
-                Cache::forget('pterodactyl_eggs');
+                $eggs = array_replace($eggs, $this->readFromPanel($server, fn () => PanelApi::for($server)->eggs()));
             }
 
-            return $tmp;
+            return $eggs;
         });
     }
 
     private function fetchServers()
     {
-        return Cache::remember('pterodactyl_servers', now()->addMinutes(10), function () {
+        return Cache::remember("{$this->type}_config_servers", now()->addMinutes(10), function () {
             return collect($this->servers)->mapWithKeys(function (Server $server) {
                 return [$server->id => $server->name];
             })->toArray();
@@ -68,27 +43,30 @@ trait PterodactylConfigTrait
 
     private function fetchLocations(): array
     {
-        return Cache::remember('pterodactyl_locations', now()->addMinutes(10), function () {
-            return collect($this->servers)->mapWithKeys(function (Server $server) {
-                $response = Http::callApi($server, 'locations')->toJson();
-                if ($response == null) {
-                    Session::flash('error', $server->name.' : Error PHPMyAdmin detected. Please use domain name.');
-
-                    return [];
+        return $this->rememberNonEmpty("{$this->type}_config_locations", now()->addMinutes(10), function () {
+            $locations = [];
+            foreach ($this->servers as $server) {
+                foreach ($this->readFromPanel($server, fn () => Http::listAll($server, 'locations')) as $location) {
+                    $locations[$location->attributes->id] = $location->attributes->short.' - '.$server->name;
                 }
-                if (property_exists($response, 'data')) {
-                    $data = $response->data;
-                } else {
-                    Session::flash('error', $server->name.' : Nests or locations cannot be reached (check your application key permission)');
-                    $data = [];
-                }
+            }
 
-                return collect($data)->mapWithKeys(function ($data) use ($server) {
-                    $attr = $data->attributes;
-
-                    return [$attr->id => $attr->short.' - '.$server->name];
-                })->toArray();
-            })->toArray();
+            return $locations;
         });
+    }
+
+    // One panel that is down or refuses the key must not empty the lists coming from the other panels.
+    private function readFromPanel(Server $server, callable $read): array
+    {
+        try {
+            return $read();
+        } catch (ConnectionException $e) {
+            Session::flash('error', __('pterodactyl::messages.errors.panel_unreachable', ['server' => $server->name]));
+        } catch (ExternalApiException $e) {
+            Session::flash('error', __('pterodactyl::messages.errors.panel_refused', ['server' => $server->name]));
+        }
+        logger()->warning('Pterodactyl panel could not be read', ['server_id' => $server->id, 'error' => $e->getMessage()]);
+
+        return [];
     }
 }

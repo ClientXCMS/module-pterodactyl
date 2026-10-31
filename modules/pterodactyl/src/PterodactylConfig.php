@@ -44,22 +44,37 @@ class PterodactylConfig extends AbstractConfig
         'eggs',
         'force_outgoing_ip',
     ];
-    
 
     public function render(Product $product)
     {
         $config = $this->getConfig($product->id, new \App\Modules\Pterodactyl\Models\PterodactylConfig);
+        $currentEggs = (array) ($config->eggs ?? []);
         $context = [
             'locations' => $this->fetchLocations(),
-            'eggs' => $this->fetchEggs(),
+            'eggs' => $this->alignWithSavedKeys($this->fetchEggs(), $currentEggs),
             'delimiter' => \App\Modules\Pterodactyl\Models\PterodactylConfig::DELIMITER,
             'servers' => $this->fetchServers(),
             'product' => $product,
             'config' => $config,
-            'currenteggs' => $context['config']->eggs ?? []
+            'currenteggs' => $currentEggs,
         ];
 
         return view($this->type.'_admin::product-config', $context);
+    }
+
+    // A key saved under 1.x carries a nest that a 2.x panel no longer reports: show the saved key so the egg stays selected.
+    private function alignWithSavedKeys(array $options, array $savedKeys): array
+    {
+        $missingByEgg = [];
+        foreach (array_diff($savedKeys, array_keys($options)) as $key) {
+            $missingByEgg[\App\Modules\Pterodactyl\Models\PterodactylConfig::parseEggKey((string) $key)[0]] = $key;
+        }
+        $aligned = [];
+        foreach ($options as $key => $label) {
+            $aligned[$missingByEgg[\App\Modules\Pterodactyl\Models\PterodactylConfig::parseEggKey((string) $key)[0]] ?? $key] = $label;
+        }
+
+        return $aligned;
     }
 
     public function validate(): array
@@ -103,7 +118,7 @@ class PterodactylConfig extends AbstractConfig
 
     private function clearEggCache(Product $product): void
     {
-        $prefix = $this->type;
+        $prefix = $this->type === 'pterodactyl' ? PterodactylData::CACHE_PREFIX : $this->type;
         $config = $this->model::where('product_id', $product->id)->first();
 
         if ($config !== null && $config->server_id !== null) {
